@@ -75,13 +75,35 @@ define(function(){
 				return this._id;
 			}
 		},
+		absX : {
+			get : function(){
+				if (this.parent){
+					return this.parent.absX + this.x;
+				} else {
+					return this.x;
+				}
+			}
+		},
+		absY : {
+			get : function(){
+				if (this.parent){
+					return this.parent.absY + this.y;
+				} else {
+					return this.y;
+				}
+			}
+		},
 		x : {
 			get : function(){ return this.position.x },
-			set : function(x){ this.position.x = x; },
+			set : function(x){ 
+				this.position.x = x; 
+			},
 		},
 		y : {
 			get : function(){ return this.position.y },
-			set : function(y){ this.position.y = y; },
+			set : function(y){ 
+				this.position.y = y; 
+			},
 		},
 		render : {
 			value : function(parent, context){
@@ -94,6 +116,7 @@ define(function(){
 		},
 		addChild : {
 			value : function(child){
+				child.parent = this;
 				this.children.push(child);
 				this.children.size = this.children.length;
 			},
@@ -129,7 +152,142 @@ define(function(){
 		render : {
 			value : function(parent, context){
 				if (!this.texture.loaded) return;
-				context.drawImage(this.texture.image, this.x, this.y);
+				context.drawImage(this.texture.image, this.absX, this.absY);
+			}
+		}
+	});
+
+	var Graphics = tools.inheritCLASS(Node, {
+		constructor : function(){
+			this.primitives = [];
+			this.activePath = null;
+
+			this.fillAlpha = 1;
+			this.fillColor = "#000000";
+
+			this.lineAlpha = 1;
+			this.lineColor = "#000000";
+			this.lineWidth = 1;
+		},
+		lineTo : {
+			value : function(x, y){
+				if (!this.activePath){
+					this.moveTo(x, y);
+				}
+
+				this.activePath.path.push(x);
+				this.activePath.path.push(y);
+
+			}
+		},
+		moveTo : {
+			value : function(x, y){
+				this.primitives.push({
+					type : "path",
+					lineColor : this.lineColor,
+					lineAlpha : this.lineAlpha,
+					lineWidth : this.lineWidth,
+					path : [x, y]
+				});
+
+				this.activePath = this.primitives[this.primitives.length - 1];
+			}
+		},
+		lineStyle : {
+			value : function(width, color, alpha){
+				this.lineWidth = width;
+				this.lineAlpha = alpha;
+				this.lineColor = color;
+			}
+		},
+		drawRect : {
+			value : function(x, y, w, h){
+				this.primitives.push({
+					type : "rect",
+					x : x,
+					y : y,
+					w : w,
+					h : h,
+					fillColor : this.fillColor,
+					fillAlpha : this.fillAlpha,
+					lineColor : this.lineColor,
+					lineAlpha : this.lineAlpha,
+					lineWidth : this.lineWidth
+				});
+			},
+		},
+		drawCircle : {
+			value : function(x, y, radius){
+				this.primitives.push({
+					type : "circle",
+					x : x,
+					y : y,
+					radius : radius,
+					fillColor : this.fillColor,
+					fillAlpha : this.fillAlpha,
+					lineColor : this.lineColor,
+					lineAlpha : this.lineAlpha,
+					lineWidth : this.lineWidth
+				});
+			},
+		},
+		beginFill : {
+			value : function(color, alpha){
+				this.fillAlpha = alpha;
+				this.fillColor = color;
+			}
+		},	
+		endFill : {
+			value : function(){
+
+			}
+		},
+		clear : {
+			value : function(){
+
+			}
+		},
+		drawPath : {
+			value : function(){
+
+			}
+		},	
+		render : {
+			value : function(parent, context){
+				var absX = this.absX;
+				var absY = this.absY;
+
+				for (var a = 0, l = this.primitives.length, current; a < l; a++){
+					current = this.primitives[a];
+
+					switch(current.type){
+						case "path":
+
+						break;
+						case "rect":
+							context.beginPath();
+							context.lineWidth = current.lineWidth || 0;
+							context.strokeStyle = current.lineColor;
+							context.globalAlpha = current.lineAlpha || 1;
+							context.rect(absX + current.x, absY + current.y, current.w, current.h);
+							context.stroke();
+							context.fillStyle = current.fillColor;
+							context.globalAlpha = current.fillAlpha || 1;
+							context.fillRect(absX + current.x, absY + current.y, current.w, current.h);
+						break;
+						case "circle":
+							context.beginPath();
+							context.arc(absX + current.x, absY + current.y, current.radius, 0, 2 * Math.PI, false);
+							context.fillStyle = current.fillColor;
+							context.globalAlpha = current.fillAlpha || 1;
+							context.fill();
+							context.lineWidth = current.lineWidth || 0;
+							context.globalAlpha = current.lineAlpha || 1;
+							context.strokeStyle = current.lineColor;
+							context.stroke();
+						break;
+					}
+				}
 			}
 		}
 	});
@@ -157,6 +315,7 @@ define(function(){
 		Sprite : Sprite,
 		Point : Point,
 		Texture : Texture,
+		Graphics : Graphics,
 		resize : function(w, h){
 			this.size.x = w;
 			this.size.y = h;
@@ -165,6 +324,7 @@ define(function(){
 		},	
 		render : function(){
 			this.prerender();
+			this.ctx.clearRect(0, 0, this.size.x, this.size.y);
 			this.ctx.drawImage(this.xCanvas, 0, 0);
 		},
 		prerender : function(){

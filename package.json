@@ -15,6 +15,7 @@
     "dependencies": {
         "vpplus": "git://github.com/sanyabeast/vpplus.git",
         "unicycle": "git://github.com/sanyabeast/unicycle.git",
+        "tweener": "git://github.com/sanyabeast/tweener.git",
         "requirejs": "latest",
         "requirejs-text": "latest"
     }
