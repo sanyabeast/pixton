@@ -6,6 +6,16 @@ define(function(){
 		genID : function(prefix){
 			return (prefix ? prefix + "-" : "") + Math.random().toString(32).substring(3, 10); 
 		},
+		processNumbers : function(string){
+			var match = string.match(/^\d+$/g);
+
+		},
+		removeFromArrByIndex : function(arr, index){
+			return arr.splice(index, 1);
+		},
+		removeFromArrByValue : function(arr, value){
+			return this.removeFromArrByIndex(arr, arr.indexOf(value));
+		},
 		inheritCLASS : function(SuperC, prototype){
 			var C = prototype.constructor;
 			delete prototype.constructor;
@@ -37,7 +47,39 @@ define(function(){
 		}
 	};
 
+
 	var tools = new Tools;
+
+	/*Tokelist*/
+	var TokensList = tools.CLASS({
+		constructor : function(init){
+			if (typeof init == "string"){
+				this.content = init.join(" ");
+			} else if (typeof init == "array"){
+				this.content = init;
+			} else {
+				this.content = [];
+			}
+		},
+		content : {
+			get : function(){
+				return this._content;
+			},
+			set : function(content){
+				this._content = content || [];
+			}
+		},
+		add : {
+			value : function(value){
+				this.content.push(value);
+			}
+		},
+		remove : {
+			value : function(value){
+				tools.removeFromArrByValue(this.content, value);
+			}
+		}
+	});
 
 	/*POINT*/
 	var Point = tools.CLASS({
@@ -62,12 +104,34 @@ define(function(){
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	/*NODE*/
 	var Node = tools.CLASS({
-		constructor : function(){
+		constructor : function(options){
+			options = options || {};
 			this.children = [];
 			this.position = new Point();
+			this.scale = new Point(1, 1);
+			this.classes = new TokensList(options.classes);
 		},
 		tools : {
 			value : new Tools
+		},
+		id : {
+			get : function(){
+				return this._id || null;
+			},
+			set : function(id){
+				this._id = id;
+			}
+		},	
+		class : {
+			get : function(){
+				return this._class || "";
+			},
+			set : function(info){
+				this._class = info;
+			}
+		},
+		matchSelector : function(selector){
+
 		},
 		id : {
 			get : function(){
@@ -130,6 +194,16 @@ define(function(){
 			this.image.onload = this.onLoad.bind(this);
 			this.image.src = path;
 		},
+		width : {
+			get : function(){
+				return this.image.width || 0;
+			},
+		},
+		height : {
+			get : function(){
+				return this.image.height || 0;
+			},
+		},
 		loaded : {
 			get : function(){
 				return this._loaded || false;
@@ -152,7 +226,7 @@ define(function(){
 		render : {
 			value : function(parent, context){
 				if (!this.texture.loaded) return;
-				context.drawImage(this.texture.image, this.absX, this.absY);
+				context.drawImage(this.texture.image, this.absX, this.absY, this.texture.width * this.scale.x, this.texture.height * this.scale.y);
 			}
 		}
 	});
@@ -244,7 +318,7 @@ define(function(){
 		},
 		clear : {
 			value : function(){
-
+				this.primitives.length = 0;
 			}
 		},
 		drawPath : {
@@ -292,6 +366,43 @@ define(function(){
 		}
 	});
 
+	var Text = tools.inheritCLASS(Node, {
+		constructor : function(text, styles){
+			this._text = text;
+			this.styles = styles;
+		},
+		styles : {
+			get : function(){
+				return this._styles;
+			},
+			set : function(styles){
+				styles = styles || {};
+				styles.fontSize = styles.fontSize || "16px";
+				styles.fontFamily = styles.fontFamily || "sans-serif";
+				styles.color = styles.color || "#000000";
+				styles.textAlign = styles.textAlign || "left";
+				this._styles = styles;
+			}
+		},	
+		text : {
+			get : function(){ return this._text },
+			set : function(text){
+				this._text = text;
+			}
+		},	
+		render : {
+			value : function(parent, context){
+				var _this = this;
+				var absX = this.absX;
+				var absY = this.absY;
+
+				context.fillStyle = this.styles.color;
+				context.textAlign = this.styles.textAlign;
+				context.fillText(this.text, absX, absY);
+			}
+		}
+	});
+
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	/*PIXTON*/
@@ -316,6 +427,8 @@ define(function(){
 		Point : Point,
 		Texture : Texture,
 		Graphics : Graphics,
+		Text : Text,
+		TokensList : TokensList,
 		resize : function(w, h){
 			this.size.x = w;
 			this.size.y = h;

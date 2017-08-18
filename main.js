@@ -22,12 +22,16 @@ requirejs(["unicycle", "tweener", "Pixton"], function(Unicycle, tweener, Pixton)
 	unicycle.start();
 
 	var sprite1 = window.sprite1 = new pixton.Sprite(new pixton.Texture("res/bg_1.jpg"));
-	var sprite2 = window.sprite2 = new pixton.Sprite(new pixton.Texture("res/bg_2.jpg"))
+	var sprite2 = window.sprite2 = new pixton.Sprite(new pixton.Texture("res/bg_2.jpg"));
+	sprite1.classes.add("sprite");
 
-	//pixton.root.addChild(sprite1);
+	sprite2.x = 300;
+
+	pixton.root.addChild(sprite1);
 	
 	var container = window.container = new pixton.Node();
-	//container.addChild(sprite2);
+	pixton.root.addChild(sprite2);
+	container.y = 300;
 
 	pixton.root.addChild(container);
 
@@ -50,6 +54,14 @@ requirejs(["unicycle", "tweener", "Pixton"], function(Unicycle, tweener, Pixton)
 	graphics.lineTo(300, 350);
 	graphics.lineTo(450, 600);
 	graphics.lineTo(200, 250);
+
+	var text = window.text = new pixton.Text("Hello world", {
+		fontSize : "16em",
+		fontFamily : "monospace",
+		color : "#222111",
+	});
+
+	pixton.root.addChild(text);
 
 
 }.bind(window));
