@@ -97,6 +97,13 @@ define(function(){
 		y : {
 			get : function(){ return this._y },
 			set : function(y){ this._y = y; }
+		},
+		set : {
+			value : function(x, y){
+				if (typeof y == "undefined") y = x;
+				this.x = x;
+				this.y = y;
+			}
 		}
 	});
 
@@ -326,32 +333,63 @@ define(function(){
 
 			}
 		},	
+		drawPath : {
+			value : function(path, context){
+				var absX = this.absX;
+				var absY = this.absY;
+				var sx = this.scale.x;
+				var sy = this.scale.y;
+
+
+				context.beginPath();
+				context.moveTo((path[0] + absX) * sx, (path[1] + absY) * sy);
+
+				for (var a = 2, l = path.length, x, y; a < l; a++){
+					if (a % 2){
+						x = (path[a] + absX) * sx;
+						continue;
+					} else {
+						y = (path[a] + absY) * sy;
+						context.lineTo(x, y);
+					}
+				}
+
+				context.stroke();
+
+			}
+		},
 		render : {
 			value : function(parent, context){
 				var absX = this.absX;
 				var absY = this.absY;
+				var sx = this.scale.x;
+				var sy = this.scale.y;
 
 				for (var a = 0, l = this.primitives.length, current; a < l; a++){
 					current = this.primitives[a];
 
 					switch(current.type){
 						case "path":
-
+							this.drawPath(current.path, context);
 						break;
 						case "rect":
 							context.beginPath();
 							context.lineWidth = current.lineWidth || 0;
 							context.strokeStyle = current.lineColor;
 							context.globalAlpha = current.lineAlpha || 1;
-							context.rect(absX + current.x, absY + current.y, current.w, current.h);
+							context.rect((absX + current.x) * sx, (absY + current.y) * sy, current.w * sx, current.h * sy);
 							context.stroke();
 							context.fillStyle = current.fillColor;
 							context.globalAlpha = current.fillAlpha || 1;
 							context.fillRect(absX + current.x, absY + current.y, current.w, current.h);
 						break;
 						case "circle":
+						  	context.save();
 							context.beginPath();
-							context.arc(absX + current.x, absY + current.y, current.radius, 0, 2 * Math.PI, false);
+							context.translate((absX + current.x) * sx, (absY + current.y) * sy);
+							context.scale(sx, sy);
+							context.arc(0, 0, current.radius, 0, 2 * Math.PI, false);
+							context.restore();
 							context.fillStyle = current.fillColor;
 							context.globalAlpha = current.fillAlpha || 1;
 							context.fill();
@@ -392,10 +430,10 @@ define(function(){
 		},	
 		render : {
 			value : function(parent, context){
-				var _this = this;
 				var absX = this.absX;
 				var absY = this.absY;
 
+				context.font = this.styles.fontSize + " " + this.styles.fontFamily;
 				context.fillStyle = this.styles.color;
 				context.textAlign = this.styles.textAlign;
 				context.fillText(this.text, absX, absY);

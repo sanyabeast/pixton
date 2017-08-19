@@ -27,10 +27,10 @@ requirejs(["unicycle", "tweener", "Pixton"], function(Unicycle, tweener, Pixton)
 
 	sprite2.x = 300;
 
-	pixton.root.addChild(sprite1);
+	//pixton.root.addChild(sprite1);
 	
 	var container = window.container = new pixton.Node();
-	pixton.root.addChild(sprite2);
+	//pixton.root.addChild(sprite2);
 	container.y = 300;
 
 	pixton.root.addChild(container);
@@ -56,10 +56,12 @@ requirejs(["unicycle", "tweener", "Pixton"], function(Unicycle, tweener, Pixton)
 	graphics.lineTo(200, 250);
 
 	var text = window.text = new pixton.Text("Hello world", {
-		fontSize : "16em",
-		fontFamily : "monospace",
+		fontSize : "96px",
+		fontFamily : "serif",
 		color : "#222111",
 	});
+
+	text.y = 96;
 
 	pixton.root.addChild(text);
 
