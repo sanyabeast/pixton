@@ -313,6 +313,33 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 							this.graphics.lineTo(x, y);							
 						}
 					}
+
+					this.graphics.lineStyle(3, "#8bc14a", 0.75);
+					move = false;
+
+					for (a = this.nearest(this.x, this.accuracy, false), x, y, point; a < endX; a += this.accuracy){
+						point = this.getPoint(a);
+
+						if (!point){
+							move = false;
+							continue;
+						}
+
+						x = point.x;
+						y = point.y;
+
+
+						y = this.sma(point, 120);
+						x = this.transX(x);
+						y = this.transY(y);
+
+						if (!move){
+							move = true;
+							this.graphics.moveTo(x, y);
+						} else {
+							this.graphics.lineTo(x, y);							
+						}
+					}
 				}
 			};
 

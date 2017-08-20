@@ -56,15 +56,10 @@ define(function(){
 	var tools = new Tools;
 
 	/*Tokelist*/
-	var TokensList = tools.CLASS({
-		constructor : function(init){
-			if (typeof init == "string"){
-				this.content = init.join(" ");
-			} else if (typeof init == "array"){
-				this.content = init;
-			} else {
-				this.content = [];
-			}
+	var TokensCollection = tools.CLASS({
+		constructor : function(content){
+			this.content = content;
+			this.loop = { break : false, continue : false };
 		},
 		content : {
 			get : function(){
@@ -77,11 +72,58 @@ define(function(){
 		add : {
 			value : function(value){
 				this.content.push(value);
+				this.content.size = this.content.length;
+				return this.content[this.content.size - 1];
 			}
 		},
 		remove : {
 			value : function(value){
 				tools.removeFromArrByValue(this.content, value);
+				this.content.size = this.content.length;
+			}
+		},
+		iterate : {
+			value : function(callback, context){
+				var result;
+				this.loop.break = this.loop.continue = false;
+
+				for (var a = 0; a < this.content.size; a++){
+					if (context){
+						result = callback.call(context, this.content[a], a, this.loop);
+					} else {
+						result = callback(this.content[a], a, this.loop);
+					}
+
+					if (this.loop.break) break;
+				}
+
+				return result;
+
+			},
+		},
+		match : function(classes){
+			classes = classes.split(".");
+			var result = false;
+
+			this.iterate(function(value, index, loop){
+				if (classes.indexOf(value) < 0){
+					result = false;
+					loop.break;
+				}
+			}, this);
+
+			return result;
+
+		},
+		contains : {
+			value : function(value){
+				return this.content.indexOf(value) > -1;
+			}
+		},
+		clear : {
+			value : function(){
+				this._content.length = 0;
+				this._content.size = 0;
 			}
 		}
 	});
@@ -118,37 +160,21 @@ define(function(){
 	var Node = tools.CLASS({
 		constructor : function(options){
 			options = options || {};
-			this.children = [];
+			this.children = new TokensCollection();
 			this.position = new Point();
 			this.scale = new Point(1, 1);
-			this.classes = new TokensList(options.classes);
+			this.classes = new TokensCollection(options.classes);
 		},
 		tools : {
 			value : new Tools
 		},
 		id : {
 			get : function(){
-				return this._id || null;
-			},
-			set : function(id){
-				this._id = id;
-			}
-		},	
-		class : {
-			get : function(){
-				return this._class || "";
-			},
-			set : function(info){
-				this._class = info;
-			}
-		},
-		matchSelector : function(selector){
-
-		},
-		id : {
-			get : function(){
 				if (!this._id) this._id = this.tools.genID("node");
 				return this._id;
+			},
+			set : function(id){
+				thi.id = id;
 			}
 		},
 		absX : {
@@ -183,9 +209,12 @@ define(function(){
 		},
 		render : {
 			value : function(parent, context){
-				for (var a = 0; a < this.children.size; a++){
-					this.children[a].render(this, context);
-				}
+				this.children.iterate(function(child, index){
+					child.render(this, context);
+				}, this);
+				// for (var a = 0; a < this.children.size; a++){
+				// 	this.children[a].render(this, context);
+				// }
 			},
 			writable : true,
 			configurable : true
@@ -198,8 +227,7 @@ define(function(){
 				}
 
 				child.parent = this;
-				this.children.push(child);
-				this.children.size = this.children.length;
+				this.children.add(child);
 
 				return this;
 			},
@@ -252,7 +280,7 @@ define(function(){
 
 	var Graphics = tools.inheritCLASS(Node, {
 		constructor : function(){
-			this.primitives = [];
+			this.primitives = new TokensCollection;
 			this.activePath = null;
 
 			this.fillAlpha = 1;
@@ -279,7 +307,7 @@ define(function(){
 		},
 		moveTo : {
 			value : function(x, y){
-				this.primitives.push({
+				this.activePath = this.primitives.add({
 					type : "path",
 					lineColor : this.lineColor,
 					lineAlpha : this.lineAlpha,
@@ -288,8 +316,6 @@ define(function(){
 					lineCap   : this.lineCap,
 					path : [x, y]
 				});
-
-				this.activePath = this.primitives[this.primitives.length - 1];
 
 				return this;
 			}
@@ -305,7 +331,7 @@ define(function(){
 		},
 		drawRect : {
 			value : function(x, y, w, h){
-				this.primitives.push({
+				this.primitives.add({
 					type : "rect",
 					x : x,
 					y : y,
@@ -323,7 +349,7 @@ define(function(){
 		},
 		drawCircle : {
 			value : function(x, y, radius){
-				this.primitives.push({
+				this.primitives.add({
 					type : "circle",
 					x : x,
 					y : y,
@@ -355,7 +381,7 @@ define(function(){
 		},
 		clear : {
 			value : function(){
-				this.primitives.length = 0;
+				this.primitives.clear();
 				this.activePath = null;
 
 				return this;
@@ -401,9 +427,7 @@ define(function(){
 				var sx = this.scale.x;
 				var sy = this.scale.y;
 
-				for (var a = 0, l = this.primitives.length, current; a < l; a++){
-					current = this.primitives[a];
-
+				this.primitives.iterate(function(current, index){
 					switch(current.type){
 						case "path":
 							this.drawPath(current, context);
@@ -435,7 +459,7 @@ define(function(){
 							context.stroke();
 						break;
 					}
-				}
+				}, this);
 			}
 		}
 	});
@@ -502,7 +526,7 @@ define(function(){
 		Texture : Texture,
 		Graphics : Graphics,
 		Text : Text,
-		TokensList : TokensList,
+		TokensCollection : TokensCollection,
 		resize : function(w, h){
 			this.size.x = w;
 			this.size.y = h;
