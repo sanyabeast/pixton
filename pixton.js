@@ -16,6 +16,11 @@ define(function(){
 		removeFromArrByValue : function(arr, value){
 			return this.removeFromArrByIndex(arr, arr.indexOf(value));
 		},
+		collectionMethod : function(coll, callback, context){
+			for (var a = 0, l = coll.length; a < l; a++){
+				callback.call(context, coll[a]);
+			}
+		},	
 		inheritCLASS : function(SuperC, prototype){
 			var C = prototype.constructor;
 			delete prototype.constructor;
@@ -187,9 +192,16 @@ define(function(){
 		},
 		addChild : {
 			value : function(child){
+				if (arguments.length > 1){
+					tools.collectionMethod(arguments, this.addChild, this);
+					return this;
+				}
+
 				child.parent = this;
 				this.children.push(child);
 				this.children.size = this.children.length;
+
+				return this;
 			},
 		}
 	});
@@ -249,6 +261,9 @@ define(function(){
 			this.lineAlpha = 1;
 			this.lineColor = "#000000";
 			this.lineWidth = 1;
+
+			this.lineJoin = "round";
+			this.lineCap = "round";
 		},
 		lineTo : {
 			value : function(x, y){
@@ -259,6 +274,7 @@ define(function(){
 				this.activePath.path.push(x);
 				this.activePath.path.push(y);
 
+				return this;
 			}
 		},
 		moveTo : {
@@ -268,10 +284,14 @@ define(function(){
 					lineColor : this.lineColor,
 					lineAlpha : this.lineAlpha,
 					lineWidth : this.lineWidth,
+					lineJoin  : this.lineJoin,
+					lineCap   : this.lineCap,
 					path : [x, y]
 				});
 
 				this.activePath = this.primitives[this.primitives.length - 1];
+
+				return this;
 			}
 		},
 		lineStyle : {
@@ -279,6 +299,8 @@ define(function(){
 				this.lineWidth = width;
 				this.lineAlpha = alpha;
 				this.lineColor = color;
+
+				return this;
 			}
 		},
 		drawRect : {
@@ -295,6 +317,8 @@ define(function(){
 					lineAlpha : this.lineAlpha,
 					lineWidth : this.lineWidth
 				});
+
+				return this;
 			},
 		},
 		drawCircle : {
@@ -310,42 +334,47 @@ define(function(){
 					lineAlpha : this.lineAlpha,
 					lineWidth : this.lineWidth
 				});
+
+				return this;
 			},
 		},
 		beginFill : {
 			value : function(color, alpha){
 				this.fillAlpha = alpha;
 				this.fillColor = color;
+
+				return this;
 			}
 		},	
 		endFill : {
 			value : function(){
 
+
+				return this;
 			}
 		},
 		clear : {
 			value : function(){
 				this.primitives.length = 0;
+				this.activePath = null;
+
+				return this;
 			}
 		},
 		drawPath : {
-			value : function(){
+			value : function(data, context){
+				var path = data.path;
 
-			}
-		},	
-		drawPath : {
-			value : function(path, context){
 				var absX = this.absX;
 				var absY = this.absY;
 				var sx = this.scale.x;
 				var sy = this.scale.y;
 
-
 				context.beginPath();
 				context.moveTo((path[0] + absX) * sx, (path[1] + absY) * sy);
 
 				for (var a = 2, l = path.length, x, y; a < l; a++){
-					if (a % 2){
+					if (a % 2 == 0){
 						x = (path[a] + absX) * sx;
 						continue;
 					} else {
@@ -354,7 +383,14 @@ define(function(){
 					}
 				}
 
+				context.strokeStyle = data.lineColor;
+				context.globalAlpha = data.lineAlpha;
+				context.lineWidth = data.lineWidth;
+				context.lineJoin = data.lineJoin;
+				context.lineCap = data.lineCap;
 				context.stroke();
+
+				return this;
 
 			}
 		},
@@ -370,7 +406,7 @@ define(function(){
 
 					switch(current.type){
 						case "path":
-							this.drawPath(current.path, context);
+							this.drawPath(current, context);
 						break;
 						case "rect":
 							context.beginPath();
