@@ -329,9 +329,16 @@ define(function(){
 				dsx *= this.scale.x;
 				dsy *= this.scale.y;
 
+				var sw = 0, sh = 0;
+
 				this.children.iterate(function(child, index){
 					child.render(this, context, dx, dy, dsx, dsy);
+					if (child.x + child.size.x > sw) sw = child.x + child.size.x;
+					if (child.y + child.size.y > sh) sh = child.y + child.size.y;
 				}, this);
+
+				this.size.x = sw;
+				this.size.y = sh;
 			},
 			writable : true,
 			configurable : true
@@ -704,7 +711,7 @@ define(function(){
 			this.xCtx = this.xCanvas.getContext("2d");
 
 			this.render = this.render.bind(this);
-			this._setupInteractivity(options);
+			this.setupInteractivity();
 
 		},
 		Texture : {
@@ -751,14 +758,15 @@ define(function(){
 				return this._events;
 			}
 		},
-		_setupInteractivity : {
-			value : function(){
+		setupInteractivity : {
+			value : function(element){
+				element = element || this.canvas;
 				this.prevInteractionTime = +new Date();
 				var events = this.events;
 				this._onUserEvent = this._onUserEvent.bind(this);
 
 				for (var k in events){
-					this.canvas.addEventListener(k, this._onUserEvent);
+					element.addEventListener(k, this._onUserEvent);
 				}
 
 			}
@@ -775,6 +783,8 @@ define(function(){
 
 				var x = evt.offsetX;
 				var y = evt.offsetY;
+
+				//if (this.interactive) this.processInteractivity(type, x, y, this.canvas, evt, 0, 0)
 
 				this.checkInteractivity(type, x, y, this.canvas, evt, 0, 0);
 			},
