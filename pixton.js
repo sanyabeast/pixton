@@ -305,6 +305,8 @@ define(function(){
 
 				if (eventType == "pointermove" && !inside && this.hovered){
 					if (this.buttonMode) canvas.style.cursor = "default";
+										console.log(canvas.style.cursor);
+
 					this.hovered = false;
 					if (this.callbacks.contains("pointerout")) this.callbacks.get("pointerout")(this.eventData);
 				}
@@ -779,6 +781,7 @@ define(function(){
 			this.xCtx = this.xCanvas.getContext("2d");
 
 			this.render = this.render.bind(this);
+			this._onUserEvent = this._onUserEvent.bind(this);
 			this.setupInteractivity();
 
 		},
@@ -828,14 +831,30 @@ define(function(){
 		},
 		setupInteractivity : {
 			value : function(element){
-				element = element || this.canvas;
-				this.prevInteractionTime = +new Date();
-				var events = this.events;
-				this._onUserEvent = this._onUserEvent.bind(this);
+				if (this.interactionElement){
+					clearInterval(this.interactionElement.customEventCheckingID);
+					delete this.interactionElement;
+				}
 
+
+				element = element || this.canvas;
+
+				if (!element){
+					return;
+				}
+
+				var events = this.events;
+				
 				for (var k in events){
 					element.addEventListener(k, this._onUserEvent);
 				}
+
+				element.testEvent = new Event("mousemove");
+				element.customEventCheckingID = setInterval(function(){
+					element.dispatchEvent(element.testEvent);
+				}, this.options.interactionFreq || 250);
+
+				this.interactionElement = element;
 
 			}
 		},
@@ -843,16 +862,10 @@ define(function(){
 			value : function(evt){
 				var type = this.events[evt.type];
 
-				if (type == "pointermove" && +new Date() - this.prevInteractionTime < (this.options.interactionFreq || 10)){
-					return;
-				}
-
-				this.prevInteractionTime = +new Date();
+				if (type == "pointermove") this.interactionElement.testEvent = evt;
 
 				var x = evt.offsetX;
 				var y = evt.offsetY;
-
-				//if (this.interactive) this.processInteractivity(type, x, y, this.canvas, evt, 0, 0)
 
 				this.checkInteractivity(type, x, y, this.canvas, evt, 0, 0);
 			},

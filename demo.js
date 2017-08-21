@@ -10,10 +10,10 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 		sprite1.interactive = sprite1.buttonMode = true;
 
 		var sprite2 = new pixton.Sprite(new pixton.Texture("http://bio-gram.com/assets/svg/logo-en.svg"));
-		sprite2.interactive = sprite2.buttonMode = true;
+		//sprite2.interactive = sprite2.buttonMode = true;
 		
 		var sprite3 = new pixton.Sprite(new pixton.Texture("http://bio-gram.com/assets/svg/logo-en.svg"));
-		sprite3.interactive = sprite3.buttonMode = true;
+		//sprite3.interactive = sprite3.buttonMode = true;
 		
 		var container = new pixton.Container();
 
@@ -32,17 +32,17 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 		// 	ease: "easeOutQuad"
 		// });
 
-		sprite1.callbacks.add("pointerover", function(evt, eventType){
-			console.log(evt, eventType);
-		});
+		// sprite1.callbacks.add("pointerover", function(evt, eventType){
+		// 	console.log(evt, eventType);
+		// });
 
-		sprite3.callbacks.add("pointerout", function(evt, eventType){
-			console.log(evt, eventType);
-		});
+		// sprite3.callbacks.add("pointerout", function(evt, eventType){
+		// 	console.log(evt, eventType);
+		// });
 
-		sprite2.callbacks.add("pointertap", function(){
-			console.log("Hello world");
-		});
+		// sprite2.callbacks.add("pointertap", function(){
+		// 	console.log("Hello world");
+		// });
 
 		var text = new pixton.Text("000000", {
 			fontSize : "64px",
@@ -65,7 +65,7 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 
 		graphics.y = 300;
 		graphics.x = 150;
-		graphics.interactive = true;
+		//graphics.interactive = true;
 		graphics.buttonMode = true;
 
 		graphics.callbacks.add("pointerover", function(eventData){
