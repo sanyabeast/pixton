@@ -493,7 +493,17 @@ define(function(){
 			},
 		},
 		drawPolygon : {
-			value : function(){}
+			value : function(path){
+				this.primitives.add({
+					type : "polygon",
+					path : path,
+					fillColor : this.fillColor,
+					fillAlpha : this.fillAlpha,
+					lineColor : this.lineColor,
+					lineAlpha : this.lineAlpha,
+					lineWidth : this.lineWidth
+				})
+			}
 		},
 		closePath : {
 			value : function(){
@@ -525,7 +535,38 @@ define(function(){
 				return this;
 			}
 		},
-		drawPath : {
+		renderPolygon : {
+			value : function(data, context, dx, dy, dsx, dsy){
+				var path = data.path;
+
+				context.beginPath();
+				context.moveTo((path[0] + dx) * dsx, (path[1] + dy) * dsy);
+
+				for (var a = 2, l = path.length, x, y; a < l; a++){
+					if (a % 2 == 0){
+						x = (path[a] + dx) * dsx;
+						continue;
+					} else {
+						y = (path[a] + dy) * dsy;
+						context.lineTo(x, y);
+					}
+				}
+
+				context.strokeStyle = data.lineColor;
+				context.globalAlpha = data.lineAlpha;
+				context.lineWidth = data.lineWidth;
+				context.lineJoin = data.lineJoin;
+				context.lineCap = data.lineCap;
+				context.closePath();
+				context.stroke();
+
+				context.fillStyle = data.fillColor;
+				context.globalAlpha = data.fillAlpha;
+				context.fill();
+
+			}
+		},
+		renderPath : {
 			value : function(data, context, dx, dy, dsx, dsy){
 				var path = data.path;
 
@@ -564,7 +605,10 @@ define(function(){
 				this.primitives.iterate(function(current, index){
 					switch(current.type){
 						case "path":
-							this.drawPath(current, context, dx, dy, dsx, dsy);
+							this.renderPath(current, context, dx, dy, dsx, dsy);
+						break;
+						case "polygon":
+							this.renderPolygon(current, context, dx, dy, dsx, dsy);
 						break;
 						case "rect":
 							context.beginPath();
