@@ -687,7 +687,11 @@ define(function(){
 					"mouseout"	 : "pointerout" 	,
 					"mousedown"	 : "pointerdown" 	,
 					"mouseup"	 : "pointerup" 		,
-					"click" 	 : "pointertap" 	
+					"click" 	 : "pointertap" 	,
+					"touchmove"	 : "pointermove"	,
+					"touchstart" : "pointerdown"	,
+					"touchend"	 : "pointerup"		,
+					"tap"		 : "pointertap"
 				};
 			} 
 
