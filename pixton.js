@@ -295,6 +295,20 @@ define(function(){
 				if (eventType == "pointerup" && this.hovered && inside){
 					if (this.callbacks.contains("pointerup")) this.callbacks.get("pointerup")(evt, "pointerup");
 				}
+
+				if (eventType == "pointerup" && this.hovered && !inside){
+					this.hovered = false;
+					if (this.callbacks.contains("pointerupoutside")) this.callbacks.get("pointerupoutside")(evt, "pointerupoutside");
+				}
+
+				if (eventType == "pointerdown" && this.hovered && !inside){
+					this.hovered = false;
+					if (this.callbacks.contains("pointerdownoutside")) this.callbacks.get("pointerdownoutside")(evt, "pointerdownoutside");
+				}
+
+				if (eventType == "pointertap" && !inside){
+					if (this.callbacks.contains("pointertapoutside")) this.callbacks.get("pointertapoutside")(evt, "pointertapoutside");
+				}
 			}
 		},
 		tools : {
