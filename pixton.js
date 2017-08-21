@@ -529,12 +529,6 @@ define(function(){
 			value : function(data, context, dx, dy, dsx, dsy){
 				var path = data.path;
 
-				dx += this.x;
-				dy += this.y;
-
-				dsx *= this.scale.x;
-				dsy *= this.scale.y;
-
 				context.beginPath();
 				context.moveTo((path[0] + dx) * dsx, (path[1] + dy) * dsy);
 
@@ -570,7 +564,7 @@ define(function(){
 				this.primitives.iterate(function(current, index){
 					switch(current.type){
 						case "path":
-							this.drawPath(current, context);
+							this.drawPath(current, context, dx, dy, dsx, dsy);
 						break;
 						case "rect":
 							context.beginPath();
