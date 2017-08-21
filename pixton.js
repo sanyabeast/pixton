@@ -232,6 +232,26 @@ define(function(){
 			this.size = new Point(1, 1);
 			this.classes = new TokensCollection(options.classes);
 			this.callbacks = new TokensList();
+
+			this.eventData = {
+				originalEvent : null,
+				pointer : {
+					x : 0,
+					y : 0
+				},
+				type : null,
+				target : this
+			};
+
+		},
+		visible : {
+			get : function(){
+				if (typeof this._visible == "undefined") this._visible = true;
+				return this._visible;
+			},
+			set : function(value){
+				this._visible = value;
+			}
 		},
 		interactive : {
 			get : function(){
@@ -267,49 +287,59 @@ define(function(){
 			value : function(eventType, x, y, canvas, evt, dx, dy){
 				var inside = tools.coordsBelognsRect(x, y, dx, dy, this.size.x, this.size.y);
 
+				this.eventData.originalEvent = evt;
+				this.eventData.pointer.x = x;
+				this.eventData.pointer.y = y;
+				this.eventData.type = eventType;
+
+				if (eventType == "pointerout"){
+					this.hovered = this.captured = false;
+					return;
+				}
+
 				if (eventType == "pointermove" && inside && !this.hovered){
 					if (this.buttonMode) canvas.style.cursor = "pointer";
 					this.hovered = true;
-					if (this.callbacks.contains("pointerover")) this.callbacks.get("pointerover")(evt, "pointerover");
+					if (this.callbacks.contains("pointerover")) this.callbacks.get("pointerover")(this.eventData);
 				}
 
 				if (eventType == "pointermove" && !inside && this.hovered){
 					if (this.buttonMode) canvas.style.cursor = "default";
 					this.hovered = false;
-					if (this.callbacks.contains("pointerout")) this.callbacks.get("pointerout")(evt, "pointerout");
+					if (this.callbacks.contains("pointerout")) this.callbacks.get("pointerout")(this.eventData);
 				}
 
 				if (eventType == "pointermove" && inside && this.hovered){
-					if (this.callbacks.contains("pointermove")) this.callbacks.get("pointermove")(evt, "pointermove");
+					if (this.callbacks.contains("pointermove")) this.callbacks.get("pointermove")(this.eventData);
 				}
 
 				if (eventType == "pointertap" && this.hovered && inside){
-					if (this.callbacks.contains("pointertap")) this.callbacks.get("pointertap")(evt, "pointertap");
+					if (this.callbacks.contains("pointertap")) this.callbacks.get("pointertap")(this.eventData);
 				}
 
 				if (eventType == "pointerdown" && this.hovered && inside){
 					this.captured = true;
-					if (this.callbacks.contains("pointerdown")) this.callbacks.get("pointerdown")(evt, "pointerdown");
+					if (this.callbacks.contains("pointerdown")) this.callbacks.get("pointerdown")(this.eventData);
 				}
 
 				if (eventType == "pointerup" && this.hovered && inside){
 					this.captured = false;
-					if (this.callbacks.contains("pointerup")) this.callbacks.get("pointerup")(evt, "pointerup");
+					if (this.callbacks.contains("pointerup")) this.callbacks.get("pointerup")(this.eventData);
 				}
 
 				if (eventType == "pointerup" && this.hovered && !inside){
 					this.hovered = this.captured = false;
-					if (this.callbacks.contains("pointerupoutside")) this.callbacks.get("pointerupoutside")(evt, "pointerupoutside");
+					if (this.callbacks.contains("pointerupoutside")) this.callbacks.get("pointerupoutside")(this.eventData);
 				}
 
 				if (eventType == "pointerdown" && !inside){
 					this.hovered = this.captured = false;
-					if (this.callbacks.contains("pointerdownoutside")) this.callbacks.get("pointerdownoutside")(evt, "pointerdownoutside");
+					if (this.callbacks.contains("pointerdownoutside")) this.callbacks.get("pointerdownoutside")(this.eventData);
 				}
 
 				if (eventType == "pointertap" && !inside){
 					this.hovered = this.captured = false;
-					if (this.callbacks.contains("pointertapoutside")) this.callbacks.get("pointertapoutside")(evt, "pointertapoutside");
+					if (this.callbacks.contains("pointertapoutside")) this.callbacks.get("pointertapoutside")(this.eventData);
 				}
 			}
 		},
@@ -339,6 +369,10 @@ define(function(){
 		},
 		render : {
 			value : function(parent, context, dx, dy, dsx, dsy){
+				if (!this.visible){
+					return;
+				}
+
 				dx += this.x;
 				dy += this.y;
 
@@ -412,6 +446,10 @@ define(function(){
 		},
 		render : {
 			value : function(parent, context, dx, dy, dsx, dsy){
+				if (!this.visible){
+					return;
+				}
+
 				dx += this.x;
 				dy += this.y;
 
@@ -619,6 +657,10 @@ define(function(){
 		},
 		render : {
 			value : function(parent, context, dx, dy, dsx, dsy){
+				if (!this.visible){
+					return;
+				}
+
 				dx += this.x;
 				dy += this.y;
 
@@ -706,6 +748,10 @@ define(function(){
 		},	
 		render : {
 			value : function(parent, context, dx, dy, dsx, dsy){
+				if (!this.visible){
+					return;
+				}
+
 				dx += this.x;
 				dy += this.y;
 

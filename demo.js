@@ -68,41 +68,44 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 		graphics.interactive = true;
 		graphics.buttonMode = true;
 
-		graphics.callbacks.add("pointerover", function(){
-			console.log("pointerover");
+		graphics.callbacks.add("pointerover", function(eventData){
+			console.log(eventData);
 		});
 
-		graphics.callbacks.add("pointerout", function(){
-			console.log("pointerout");
+		graphics.callbacks.add("pointerout", function(eventData){
+			console.log(eventData);
 		});
 
-		graphics.callbacks.add("pointertap", function(){
-			console.log("pointertap");
+		graphics.callbacks.add("pointertap", function(eventData){
+			console.log(eventData);
 		});
 
-		graphics.callbacks.add("pointerdown", function(){
-			console.log("pointerdown");
+		graphics.callbacks.add("pointerdown", function(eventData){
+			console.log(eventData);
 		});
 
-		graphics.callbacks.add("pointerup", function(){
-			console.log("pointerup");
+		graphics.callbacks.add("pointerup", function(eventData){
+			console.log(eventData);
 		});
 
-		graphics.callbacks.add("pointermove", function(){
-			console.log("pointermove");
+		graphics.callbacks.add("pointermove", function(eventData){
+			console.log(eventData);
 		});
 
-		graphics.callbacks.add("pointerdownoutside", function(){
-			console.log("pointerdownoutside");
+		graphics.callbacks.add("pointerdownoutside", function(eventData){
+			console.log(eventData);
 		});
 
-		graphics.callbacks.add("pointerupoutside", function(){
-			console.log("pointerupoutside");
+		graphics.callbacks.add("pointerupoutside", function(eventData){
+			console.log(eventData);
 		});
 
-		graphics.callbacks.add("pointertapoutside", function(){
-			console.log("pointertapoutside");
+		graphics.callbacks.add("pointertapoutside", function(eventData){
+			console.log(eventData);
 		});
+
+		sprite3.visible = false;
+		sprite2.visible = false;
 
 		window.graphics = graphics;
 
