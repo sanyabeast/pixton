@@ -277,7 +277,6 @@ define(function(){
 					if (this.buttonMode) canvas.style.cursor = "default";
 					this.hovered = false;
 					if (this.callbacks.contains("pointerout")) this.callbacks.get("pointerout")(evt, "pointerout");
-					return;
 				}
 
 				if (eventType == "pointermove" && inside && this.hovered){
@@ -289,24 +288,27 @@ define(function(){
 				}
 
 				if (eventType == "pointerdown" && this.hovered && inside){
+					this.captured = true;
 					if (this.callbacks.contains("pointerdown")) this.callbacks.get("pointerdown")(evt, "pointerdown");
 				}
 
 				if (eventType == "pointerup" && this.hovered && inside){
+					this.captured = false;
 					if (this.callbacks.contains("pointerup")) this.callbacks.get("pointerup")(evt, "pointerup");
 				}
 
 				if (eventType == "pointerup" && this.hovered && !inside){
-					this.hovered = false;
+					this.hovered = this.captured = false;
 					if (this.callbacks.contains("pointerupoutside")) this.callbacks.get("pointerupoutside")(evt, "pointerupoutside");
 				}
 
-				if (eventType == "pointerdown" && this.hovered && !inside){
-					this.hovered = false;
+				if (eventType == "pointerdown" && !inside){
+					this.hovered = this.captured = false;
 					if (this.callbacks.contains("pointerdownoutside")) this.callbacks.get("pointerdownoutside")(evt, "pointerdownoutside");
 				}
 
 				if (eventType == "pointertap" && !inside){
+					this.hovered = this.captured = false;
 					if (this.callbacks.contains("pointertapoutside")) this.callbacks.get("pointertapoutside")(evt, "pointertapoutside");
 				}
 			}
@@ -419,8 +421,8 @@ define(function(){
 				if (!this.texture.loaded) return;
 
 				context.drawImage(this.texture.image, dx * dsx, dy * dsy, this.texture.width * dsx, this.texture.height * dsy);
-				this.size.x = this.texture.width * this.scale.x;
-				this.size.y = this.texture.height * this.scale.y;
+				this.size._x = this.texture.width * this.scale.x;
+				this.size._y = this.texture.height * this.scale.y;
 			}
 		}
 	});
@@ -623,6 +625,8 @@ define(function(){
 				dsx *= this.scale.x;
 				dsy *= this.scale.y;
 
+				var sw = 0, sh = 0;
+
 				this.primitives.iterate(function(current, index){
 					switch(current.type){
 						case "path":
@@ -642,8 +646,8 @@ define(function(){
 							context.globalAlpha = current.fillAlpha || 1;
 							context.fillRect(dx + current.x, dy + current.y, current.w, current.h);
 
-							if ((dx + current.x) * dsx + current.w * dsx > this.size.x) this.size.x = (dx + current.x) * dsx + current.w * dsx > this.size.x;
-							if ((dy + current.y) * dsy + current.h * dsy > this.size.y) this.size.y = (dy + current.y) * dsy + current.h * dsy > this.size.y;
+							if ((dx + current.x) * dsx + current.w * dsx > sw) sw = (dx + current.x) * dsx + current.w * dsx;
+							if ((dy + current.y) * dsy + current.h * dsy > sh) sh = (dy + current.y) * dsy + current.h * dsy;
 
 						break;
 						case "circle":
@@ -661,12 +665,16 @@ define(function(){
 							context.strokeStyle = current.lineColor;
 							context.stroke();
 
-							if ((current.x) * dsx + current.radius * dsx > this.size._x) this.size._x = (current.x) * dsx + current.radius * dsx;
-							if ((current.y) * dsy + current.radius * dsy > this.size._y) this.size._y = (current.y) * dsy + current.radius * dsy;
+							if ((current.x) * dsx + current.radius * dsx > sw) sw = (current.x) * dsx + current.radius * dsx;
+							if ((current.y) * dsy + current.radius * dsy > sh) sh = (current.y) * dsy + current.radius * dsy;
 
 
 						break;
 					}
+
+					this.size._x = sw;
+					this.size._y = sh;
+
 				}, this);
 			}
 		}

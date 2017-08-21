@@ -6,13 +6,13 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 	var Demo = function(){
 		this.setupRenderer();
 
-		var sprite1 = new pixton.Sprite(new pixton.Texture("https://biogram.atlassian.net/wiki/images/icons/profilepics/default.png?noRedirect=true"));
+		var sprite1 = new pixton.Sprite(new pixton.Texture("http://bio-gram.com/assets/svg/logo-en.svg"));
 		sprite1.interactive = sprite1.buttonMode = true;
 
-		var sprite2 = new pixton.Sprite(new pixton.Texture("https://biogram.atlassian.net/wiki/images/icons/profilepics/default.png?noRedirect=true"));
+		var sprite2 = new pixton.Sprite(new pixton.Texture("http://bio-gram.com/assets/svg/logo-en.svg"));
 		sprite2.interactive = sprite2.buttonMode = true;
 		
-		var sprite3 = new pixton.Sprite(new pixton.Texture("https://biogram.atlassian.net/wiki/images/icons/profilepics/default.png?noRedirect=true"));
+		var sprite3 = new pixton.Sprite(new pixton.Texture("http://bio-gram.com/assets/svg/logo-en.svg"));
 		sprite3.interactive = sprite3.buttonMode = true;
 		
 		var container = new pixton.Container();
@@ -25,12 +25,12 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 		container.y = 300;
 		sprite2.x = 300;
 
-		tweener.to(sprite3, 2, {
-			x : 50,
-			repeat : -1,
-			yoyo : true,
-			ease: "easeOutQuad"
-		});
+		// tweener.to(sprite3, 2, {
+		// 	x : 50,
+		// 	repeat : -1,
+		// 	yoyo : true,
+		// 	ease: "easeOutQuad"
+		// });
 
 		sprite1.callbacks.add("pointerover", function(evt, eventType){
 			console.log(evt, eventType);
@@ -44,7 +44,7 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 			console.log("Hello world");
 		});
 
-		var text = new pixton.Text("Privet", {
+		var text = new pixton.Text("000000", {
 			fontSize : "64px",
 			color : "#000000"
 		});
@@ -74,6 +74,34 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 
 		graphics.callbacks.add("pointerout", function(){
 			console.log("pointerout");
+		});
+
+		graphics.callbacks.add("pointertap", function(){
+			console.log("pointertap");
+		});
+
+		graphics.callbacks.add("pointerdown", function(){
+			console.log("pointerdown");
+		});
+
+		graphics.callbacks.add("pointerup", function(){
+			console.log("pointerup");
+		});
+
+		graphics.callbacks.add("pointermove", function(){
+			console.log("pointermove");
+		});
+
+		graphics.callbacks.add("pointerdownoutside", function(){
+			console.log("pointerdownoutside");
+		});
+
+		graphics.callbacks.add("pointerupoutside", function(){
+			console.log("pointerupoutside");
+		});
+
+		graphics.callbacks.add("pointertapoutside", function(){
+			console.log("pointertapoutside");
 		});
 
 		window.graphics = graphics;
