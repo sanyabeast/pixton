@@ -252,17 +252,20 @@ define(function(){
 			}
 		},
 		checkInteractivity : {
-			value : function(eventType, x, y, canvas, evt){
-				if (this.interactive) this.processInteracivity(eventType, x, y, canvas, evt);
+			value : function(eventType, x, y, canvas, evt, dx, dy){
+				dx += this.x;
+				dy += this.y;
+
+				if (this.interactive) this.processInteracivity(eventType, x, y, canvas, evt, dx, dy);
 
 				this.children.iterate(function(child){
-					child.checkInteractivity(eventType, x, y, canvas, evt);
+					child.checkInteractivity(eventType, x, y, canvas, evt, dx, dy);
 				}, this);
 			}
 		},
 		processInteracivity : {
-			value : function(eventType, x, y, canvas, evt){
-				var inside = tools.coordsBelognsRect(x, y, this.absX, this.absY, this.size.x, this.size.y);
+			value : function(eventType, x, y, canvas, evt, dx, dy){
+				var inside = tools.coordsBelognsRect(x, y, dx, dy, this.size.x, this.size.y);
 
 				if (eventType == "pointermove" && inside && !this.hovered){
 					if (this.buttonMode) canvas.style.cursor = "pointer";
@@ -302,24 +305,6 @@ define(function(){
 				thi.id = id;
 			}
 		},
-		absX : {
-			get : function(){
-				if (this.parent){
-					return this.parent.absX + this.x;
-				} else {
-					return this.x;
-				}
-			}
-		},
-		absY : {
-			get : function(){
-				if (this.parent){
-					return this.parent.absY + this.y;
-				} else {
-					return this.y;
-				}
-			}
-		},
 		x : {
 			get : function(){ return this.position.x },
 			set : function(x){ 
@@ -333,10 +318,16 @@ define(function(){
 			},
 		},
 		render : {
-			value : function(parent, context){
+			value : function(parent, context, dx, dy, dsx, dsy){
+				dx += this.x;
+				dy += this.y;
+
+				dsx *= this.scale.x;
+				dsy *= this.scale.y;
+
 				this.children.iterate(function(child, index){
 					// console.log(child);
-					child.render(this, context);
+					child.render(this, context, dx, dy, dsx, dsy);
 				}, this);
 			},
 			writable : true,
@@ -394,9 +385,16 @@ define(function(){
 			this.texture = texture;
 		},
 		render : {
-			value : function(parent, context){
+			value : function(parent, context, dx, dy, dsx, dsy){
+				dx += this.x;
+				dy += this.y;
+
+				dsx *= this.scale.x;
+				dsy *= this.scale.y;
+
 				if (!this.texture.loaded) return;
-				context.drawImage(this.texture.image, this.absX, this.absY, this.texture.width * this.scale.x, this.texture.height * this.scale.y);
+
+				context.drawImage(this.texture.image, dx, dy, this.texture.width * dsx, this.texture.height * dsy);
 				this.size.x = this.texture.width * this.scale.x;
 				this.size.y = this.texture.height * this.scale.y;
 			}
@@ -525,23 +523,24 @@ define(function(){
 			}
 		},
 		drawPath : {
-			value : function(data, context){
+			value : function(data, context, dx, dy, dsx, dsy){
 				var path = data.path;
 
-				var absX = this.absX;
-				var absY = this.absY;
-				var sx = this.scale.x;
-				var sy = this.scale.y;
+				dx += this.x;
+				dy += this.y;
+
+				dsx *= this.scale.x;
+				dsy *= this.scale.y;
 
 				context.beginPath();
-				context.moveTo((path[0] + absX) * sx, (path[1] + absY) * sy);
+				context.moveTo((path[0] + dx) * dsx, (path[1] + dy) * dsy);
 
 				for (var a = 2, l = path.length, x, y; a < l; a++){
 					if (a % 2 == 0){
-						x = (path[a] + absX) * sx;
+						x = (path[a] + dx) * dsx;
 						continue;
 					} else {
-						y = (path[a] + absY) * sy;
+						y = (path[a] + dy) * dsy;
 						context.lineTo(x, y);
 					}
 				}
@@ -558,11 +557,12 @@ define(function(){
 			}
 		},
 		render : {
-			value : function(parent, context){
-				var absX = this.absX;
-				var absY = this.absY;
-				var sx = this.scale.x;
-				var sy = this.scale.y;
+			value : function(parent, context, dx, dy, dsx, dsy){
+				dx += this.x;
+				dy += this.y;
+
+				dsx *= this.scale.x;
+				dsy *= this.scale.y;
 
 				this.primitives.iterate(function(current, index){
 					switch(current.type){
@@ -574,17 +574,17 @@ define(function(){
 							context.lineWidth = current.lineWidth || 0;
 							context.strokeStyle = current.lineColor;
 							context.globalAlpha = current.lineAlpha || 1;
-							context.rect((absX + current.x) * sx, (absY + current.y) * sy, current.w * sx, current.h * sy);
+							context.rect((dx + current.x) * dsx, (dy + current.y) * dsy, current.w * dsx, current.h * dsy);
 							context.stroke();
 							context.fillStyle = current.fillColor;
 							context.globalAlpha = current.fillAlpha || 1;
-							context.fillRect(absX + current.x, absY + current.y, current.w, current.h);
+							context.fillRect(dx + current.x, dy + current.y, current.w, current.h);
 						break;
 						case "circle":
 						  	context.save();
 							context.beginPath();
-							context.translate((absX + current.x) * sx, (absY + current.y) * sy);
-							context.scale(sx, sy);
+							context.translate((dx + current.x) * dsx, (dy + current.y) * dsy);
+							context.scale(dsx, dsy);
 							context.arc(0, 0, current.radius, 0, 2 * Math.PI, false);
 							context.restore();
 							context.fillStyle = current.fillColor;
@@ -626,14 +626,17 @@ define(function(){
 			}
 		},	
 		render : {
-			value : function(parent, context){
-				var absX = this.absX;
-				var absY = this.absY;
+			value : function(parent, context, dx, dy, dsx, dsy){
+				dx += this.x;
+				dy += this.y;
+
+				dsx *= this.scale.x;
+				dsy *= this.scale.y;
 
 				context.font = this.styles.fontSize + " " + this.styles.fontFamily;
 				context.fillStyle = this.styles.color;
 				context.textAlign = this.styles.textAlign;
-				context.fillText(this.text, absX, absY);
+				context.fillText(this.text, dx, dy);
 			}
 		}
 	});
@@ -710,7 +713,7 @@ define(function(){
 			var x = evt.offsetX;
 			var y = evt.offsetY;
 
-			this.root.checkInteractivity(type, x, y, this.canvas, evt);
+			this.root.checkInteractivity(type, x, y, this.canvas, evt, 0, 0);
 		},
 		get resolution(){
 			if (typeof this._resolution == "undefined") this._resolution = window.devicePixelRatio || 1;
@@ -732,7 +735,7 @@ define(function(){
 		},
 		prerender : function(){
 			this.xCtx.clearRect(0, 0, this.size.x, this.size.y);
-			this.root.render(this.root, this.xCtx);
+			this.root.render(this.root, this.xCtx, 0, 0, 1, 1);
 		}
 	};
 
