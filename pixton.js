@@ -256,14 +256,14 @@ define(function(){
 				dx += this.x;
 				dy += this.y;
 
-				if (this.interactive) this.processInteracivity(eventType, x, y, canvas, evt, dx, dy);
+				if (this.interactive) this.processInteractivity(eventType, x, y, canvas, evt, dx, dy);
 
 				this.children.iterate(function(child){
 					child.checkInteractivity(eventType, x, y, canvas, evt, dx, dy);
 				}, this);
 			}
 		},
-		processInteracivity : {
+		processInteractivity : {
 			value : function(eventType, x, y, canvas, evt, dx, dy){
 				var inside = tools.coordsBelognsRect(x, y, dx, dy, this.size.x, this.size.y);
 
@@ -278,6 +278,10 @@ define(function(){
 					this.hovered = false;
 					if (this.callbacks.contains("pointerout")) this.callbacks.get("pointerout")(evt, "pointerout");
 					return;
+				}
+
+				if (eventType == "pointermove" && inside && this.hovered){
+					if (this.callbacks.contains("pointermove")) this.callbacks.get("pointermove")(evt, "pointermove");
 				}
 
 				if (eventType == "pointertap" && this.hovered && inside){
@@ -326,7 +330,6 @@ define(function(){
 				dsy *= this.scale.y;
 
 				this.children.iterate(function(child, index){
-					// console.log(child);
 					child.render(this, context, dx, dy, dsx, dsy);
 				}, this);
 			},
@@ -394,7 +397,7 @@ define(function(){
 
 				if (!this.texture.loaded) return;
 
-				context.drawImage(this.texture.image, dx, dy, this.texture.width * dsx, this.texture.height * dsy);
+				context.drawImage(this.texture.image, dx * dsx, dy * dsy, this.texture.width * dsx, this.texture.height * dsy);
 				this.size.x = this.texture.width * this.scale.x;
 				this.size.y = this.texture.height * this.scale.y;
 			}
@@ -579,6 +582,10 @@ define(function(){
 							context.fillStyle = current.fillColor;
 							context.globalAlpha = current.fillAlpha || 1;
 							context.fillRect(dx + current.x, dy + current.y, current.w, current.h);
+
+							if ((dx + current.x) * dsx + current.w * dsx > this.size.x) this.size.x = (dx + current.x) * dsx + current.w * dsx > this.size.x;
+							if ((dy + current.y) * dsy + current.h * dsy > this.size.y) this.size.y = (dy + current.y) * dsy + current.h * dsy > this.size.y;
+
 						break;
 						case "circle":
 						  	context.save();
@@ -594,6 +601,11 @@ define(function(){
 							context.globalAlpha = current.lineAlpha || 1;
 							context.strokeStyle = current.lineColor;
 							context.stroke();
+
+							if ((current.x) * dsx + current.radius * dsx > this.size._x) this.size._x = (current.x) * dsx + current.radius * dsx;
+							if ((current.y) * dsy + current.radius * dsy > this.size._y) this.size._y = (current.y) * dsy + current.radius * dsy;
+
+
 						break;
 					}
 				}, this);
@@ -644,22 +656,125 @@ define(function(){
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	/*PIXTON*/
-	var Pixton = function(options){
-		options = options || {};
-		this.canvas = options.canvas || document.createElement("canvas");
-		this.xCanvas = document.createElement("canvas");
+	var Pixton = tools.inheritCLASS(Node, {
+		constructor : function(options){
+			this.options = options = (options || {});
+			this.canvas = options.canvas || document.createElement("canvas");
+			this.xCanvas = document.createElement("canvas");
 
-		this.ctx = this.canvas.getContext("2d");
-		this.xCtx = this.xCanvas.getContext("2d");
+			this.ctx = this.canvas.getContext("2d");
+			this.xCtx = this.xCanvas.getContext("2d");
 
-		this.root = new Node();
-		this.render = this.render.bind(this);
+			this.render = this.render.bind(this);
+			this._setupInteractivity(options);
 
-		this.size = new Point(options.width || 500, options.height || 500);
+		},
+		Texture : {
+			value : Texture
+		},
+		Sprite : {
+			value : Sprite
+		},
+		Node : {
+			value : Node
+		},
+		Container : {
+			value : Node
+		},
+		Graphics : {
+			value : Graphics
+		},
+		Text : {
+			value : Text
+		},
+		TokensCollection : {
+			value : TokensCollection
+		},
+		TokensList : {
+			value : TokensList
+		},
+		events : {
+			get : function(){
+				if (typeof this._events == "undefined"){
+					this._events = {
+						"mousemove"	 : "pointermove" 	,
+						"mouseover"	 : "pointerover" 	,
+						"mouseout"	 : "pointerout" 	,
+						"mousedown"	 : "pointerdown" 	,
+						"mouseup"	 : "pointerup" 		,
+						"click" 	 : "pointertap" 	,
+						"touchmove"	 : "pointermove"	,
+						"touchstart" : "pointerdown"	,
+						"touchend"	 : "pointerup"		,
+						"tap"		 : "pointertap"
+					};
+				} 
 
-		this._setupInteractivity();
+				return this._events;
+			}
+		},
+		_setupInteractivity : {
+			value : function(){
+				this.prevInteractionTime = +new Date();
+				var events = this.events;
+				this._onUserEvent = this._onUserEvent.bind(this);
 
-	};
+				for (var k in events){
+					this.canvas.addEventListener(k, this._onUserEvent);
+				}
+
+			}
+		},
+		_onUserEvent : {
+			value : function(evt){
+				var type = this.events[evt.type];
+
+				if (type == "pointermove" && +new Date() - this.prevInteractionTime < (this.options.interactionFreq || 10)){
+					return;
+				}
+
+				this.prevInteractionTime = +new Date();
+
+				var x = evt.offsetX;
+				var y = evt.offsetY;
+
+				this.checkInteractivity(type, x, y, this.canvas, evt, 0, 0);
+			},
+			writable : true
+		},
+		resolution : {
+			get : function(){
+				if (typeof this._resolution == "undefined") this._resolution = window.devicePixelRatio || 1;
+				return this._resolution;
+			},
+			set : function(){
+				this._resolution = value;
+			}
+		},
+		resize : {
+			value : function(w, h){
+				this.size.x = w;
+				this.size.y = h;
+				this.canvas.width = this.xCanvas.width = w;
+				this.canvas.height = this.xCanvas.height = h;
+			}
+		},
+		render : {
+			value : function(){
+				this.xCtx.clearRect(0, 0, this.size.x, this.size.y);
+				this.ctx.clearRect(0, 0, this.size.x, this.size.y);
+				this.prerender(this.ctx);
+				this.ctx.drawImage(this.xCanvas, 0, 0);
+			}
+		},
+		prerender : {
+			value : function(context){
+				this.children.iterate(function(child, index){
+					child.render(this, context, this.position.x, this.position.y, this.scale.x, this.scale.y);
+				}, this);
+			}
+		}
+	});
 
 	Pixton.tools = new Tools;
 	Pixton.Node = Pixton.Container = Node;
@@ -670,74 +785,6 @@ define(function(){
 	Pixton.Text = Text;
 	Pixton.TokensCollection = TokensCollection;
 	Pixton.TokensList = TokensList;
-
-	Pixton.prototype = {
-		tools : new Tools,
-		Node : Node,
-		Container : Node,
-		Sprite : Sprite,
-		Point : Point,
-		Texture : Texture,
-		Graphics : Graphics,
-		Text : Text,
-		TokensCollection : TokensCollection,
-		TokensList : TokensList,
-		get events(){
-			if (typeof this._events == "undefined"){
-				this._events = {
-					"mousemove"	 : "pointermove" 	,
-					"mouseover"	 : "pointerover" 	,
-					"mouseout"	 : "pointerout" 	,
-					"mousedown"	 : "pointerdown" 	,
-					"mouseup"	 : "pointerup" 		,
-					"click" 	 : "pointertap" 	,
-					"touchmove"	 : "pointermove"	,
-					"touchstart" : "pointerdown"	,
-					"touchend"	 : "pointerup"		,
-					"tap"		 : "pointertap"
-				};
-			} 
-
-			return this._events;
-		},
-		_setupInteractivity : function(){
-			var events = this.events;
-
-			for (var k in events){
-				this.canvas.addEventListener(k, this._onUserEvent.bind(this));
-			}
-
-		},
-		_onUserEvent : function(evt){
-			var type = this.events[evt.type];
-			var x = evt.offsetX;
-			var y = evt.offsetY;
-
-			this.root.checkInteractivity(type, x, y, this.canvas, evt, 0, 0);
-		},
-		get resolution(){
-			if (typeof this._resolution == "undefined") this._resolution = window.devicePixelRatio || 1;
-			return this._resolution;
-		},
-		set resolution(value){
-			this._resolution = value;
-		},
-		resize : function(w, h){
-			this.size.x = w;
-			this.size.y = h;
-			this.canvas.width = this.xCanvas.width = w;
-			this.canvas.height = this.xCanvas.height = h;
-		},	
-		render : function(){
-			this.prerender();
-			this.ctx.clearRect(0, 0, this.size.x, this.size.y);
-			this.ctx.drawImage(this.xCanvas, 0, 0);
-		},
-		prerender : function(){
-			this.xCtx.clearRect(0, 0, this.size.x, this.size.y);
-			this.root.render(this.root, this.xCtx, 0, 0, 1, 1);
-		}
-	};
 
 	return Pixton;
 

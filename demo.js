@@ -19,8 +19,8 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 
 		container.addChild(sprite1, sprite2);
 
-		this.pixton.root.addChild(sprite3);
-		this.pixton.root.addChild(container);
+		this.pixton.addChild(sprite3);
+		this.pixton.addChild(container);
 
 		container.y = 300;
 		sprite2.x = 300;
@@ -43,6 +43,40 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 		sprite2.callbacks.add("pointertap", function(){
 			console.log("Hello world");
 		});
+
+		var text = new pixton.Text("Privet", {
+			fontSize : "64px",
+			color : "#000000"
+		});
+
+		pixton.addChild(text);
+
+		window.text = text;
+		text.y = 150;
+
+		window.sprite1 =sprite1;
+		window.container = container;
+
+		var graphics = new pixton.Graphics();
+
+		graphics.beginFill("#000000", 1);
+		graphics.drawCircle(10, 10, 10);
+		container.addChild(graphics);
+
+		graphics.y = 300;
+		graphics.x = 150;
+		graphics.interactive = true;
+		graphics.buttonMode = true;
+
+		graphics.callbacks.add("pointerover", function(){
+			console.log("pointerover");
+		});
+
+		graphics.callbacks.add("pointerout", function(){
+			console.log("pointerout");
+		});
+
+		window.graphics = graphics;
 
 	};
 
@@ -382,7 +416,7 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 				}
 			};
 
-			this.pixton.root.addChild(this.chartData.graphics);
+			this.pixton.addChild(this.chartData.graphics);
 			this.unicycle.addTask(this.chartData.render.bind(this.chartData));
 			this.unicycle.addTask(function(absDelta, relDelta){
 				demo.chartData.moveChart(1);
