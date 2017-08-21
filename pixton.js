@@ -21,6 +21,17 @@ define(function(){
 				callback.call(context, coll[a]);
 			}
 		},	
+		coordsBelognsRect : function(x, y, rectX, rectY, rectW, rectH){
+			var rectMX = rectX + rectW;
+			var rectMY = rectY + rectH;
+
+			if (x >= rectX && x <= rectMX && y >= rectY && y <= rectMY){
+				return true;
+			} else {
+				return false;
+			}
+
+		},
 		inheritCLASS : function(SuperC, prototype){
 			var C = prototype.constructor;
 			delete prototype.constructor;
@@ -67,20 +78,30 @@ define(function(){
 			},
 			set : function(content){
 				this._content = content || [];
-			}
+			},
+			configurable : true
 		},
 		add : {
 			value : function(value){
 				this.content.push(value);
 				this.content.size = this.content.length;
 				return this.content[this.content.size - 1];
+			},
+			writable : true,
+			configurable : true
+		},
+		get : {
+			value : function(id){
+				return this.content[id];
 			}
 		},
 		remove : {
 			value : function(value){
 				tools.removeFromArrByValue(this.content, value);
 				this.content.size = this.content.length;
-			}
+			},
+			writable : true,
+			configurable : true
 		},
 		iterate : {
 			value : function(callback, context){
@@ -100,30 +121,75 @@ define(function(){
 				return result;
 
 			},
-		},
-		match : function(classes){
-			classes = classes.split(".");
-			var result = false;
-
-			this.iterate(function(value, index, loop){
-				if (classes.indexOf(value) < 0){
-					result = false;
-					loop.break;
-				}
-			}, this);
-
-			return result;
-
+			writable : true,
+			configurable : true
 		},
 		contains : {
 			value : function(value){
 				return this.content.indexOf(value) > -1;
-			}
+			},
+			writable : true,
+			configurable : true
 		},
 		clear : {
 			value : function(){
 				this._content.length = 0;
 				this._content.size = 0;
+			},
+			writable : true,
+			configurable : true
+		}
+	});
+
+	var TokensList = tools.inheritCLASS(TokensCollection, {
+		content : {
+			get : function(){
+				return this._content;
+			},
+			set : function(content){
+				this._content = content || {};
+			}
+		},
+		add : {
+			value : function(name, value){
+				this.content[name] = value;
+				return this.content[name];
+			}
+		},
+		remove : {
+			value : function(name){
+				delete this.content[name];
+			}
+		},
+		iterate : {
+			value : function(callback, context){
+				var result;
+				this.loop.break = this.loop.continue = false;
+
+				for (var a in this.content){
+					if (context){
+						result = callback.call(context, this.content[a], a, this.loop);
+					} else {
+						result = callback(this.content[a], a, this.loop);
+					}
+
+					if (this.loop.break) break;
+				}
+
+				return result;
+
+			},
+		},
+		contains : {
+			value : function(name){
+				return typeof this.content[name] != "undefined";
+			}
+		},
+		clear : {
+			value : function(){
+				this.iterate(function(value, name){
+					delete this.content[name];
+				}, this)
 			}
 		}
 	});
@@ -163,7 +229,66 @@ define(function(){
 			this.children = new TokensCollection();
 			this.position = new Point();
 			this.scale = new Point(1, 1);
+			this.size = new Point(1, 1);
 			this.classes = new TokensCollection(options.classes);
+			this.callbacks = new TokensList();
+		},
+		interactive : {
+			get : function(){
+				if (typeof this._interactive == "undefined") this._interactive = false;
+				return this._interactive;
+			},
+			set : function(value){
+				this._interactive = value;
+			}
+		},
+		buttonMode : {
+			get : function(){
+				if (typeof this._buttonMode == "undefined") this._buttonMode = false;
+				return this._buttonMode;
+			},
+			set : function(value){
+				this._buttonMode = value;
+			}
+		},
+		checkInteractivity : {
+			value : function(eventType, x, y, canvas, evt){
+				if (this.interactive) this.processInteracivity(eventType, x, y, canvas, evt);
+
+				this.children.iterate(function(child){
+					child.checkInteractivity(eventType, x, y, canvas, evt);
+				}, this);
+			}
+		},
+		processInteracivity : {
+			value : function(eventType, x, y, canvas, evt){
+				var inside = tools.coordsBelognsRect(x, y, this.absX, this.absY, this.size.x, this.size.y);
+
+				if (eventType == "pointermove" && inside && !this.hovered){
+					if (this.buttonMode) canvas.style.cursor = "pointer";
+					this.hovered = true;
+					if (this.callbacks.contains("pointerover")) this.callbacks.get("pointerover")(evt, "pointerover");
+				}
+
+				if (eventType == "pointermove" && !inside && this.hovered){
+					if (this.buttonMode) canvas.style.cursor = "default";
+					this.hovered = false;
+					if (this.callbacks.contains("pointerout")) this.callbacks.get("pointerout")(evt, "pointerout");
+					return;
+				}
+
+				if (eventType == "pointertap" && this.hovered && inside){
+					if (this.callbacks.contains("pointertap")) this.callbacks.get("pointertap")(evt, "pointertap");
+				}
+
+				if (eventType == "pointerdown" && this.hovered && inside){
+					if (this.callbacks.contains("pointerdown")) this.callbacks.get("pointerdown")(evt, "pointerdown");
+				}
+
+				if (eventType == "pointerup" && this.hovered && inside){
+					if (this.callbacks.contains("pointerup")) this.callbacks.get("pointerup")(evt, "pointerup");
+				}
+			}
 		},
 		tools : {
 			value : new Tools
@@ -272,6 +397,8 @@ define(function(){
 			value : function(parent, context){
 				if (!this.texture.loaded) return;
 				context.drawImage(this.texture.image, this.absX, this.absY, this.texture.width * this.scale.x, this.texture.height * this.scale.y);
+				this.size.x = this.texture.width * this.scale.x;
+				this.size.y = this.texture.height * this.scale.y;
 			}
 		}
 	});
@@ -526,6 +653,9 @@ define(function(){
 		this.render = this.render.bind(this);
 
 		this.size = new Point(options.width || 500, options.height || 500);
+
+		this._setupInteractivity();
+
 	};
 
 	Pixton.tools = new Tools;
@@ -536,6 +666,7 @@ define(function(){
 	Pixton.Graphics = Graphics;
 	Pixton.Text = Text;
 	Pixton.TokensCollection = TokensCollection;
+	Pixton.TokensList = TokensList;
 
 	Pixton.prototype = {
 		tools : new Tools,
@@ -547,6 +678,36 @@ define(function(){
 		Graphics : Graphics,
 		Text : Text,
 		TokensCollection : TokensCollection,
+		TokensList : TokensList,
+		get events(){
+			if (typeof this._events == "undefined"){
+				this._events = {
+					"mousemove"	 : "pointermove" 	,
+					"mouseover"	 : "pointerover" 	,
+					"mouseout"	 : "pointerout" 	,
+					"mousedown"	 : "pointerdown" 	,
+					"mouseup"	 : "pointerup" 		,
+					"click" 	 : "pointertap" 	
+				};
+			} 
+
+			return this._events;
+		},
+		_setupInteractivity : function(){
+			var events = this.events;
+
+			for (var k in events){
+				this.canvas.addEventListener(k, this._onUserEvent.bind(this));
+			}
+
+		},
+		_onUserEvent : function(evt){
+			var type = this.events[evt.type];
+			var x = evt.offsetX;
+			var y = evt.offsetY;
+
+			this.root.checkInteractivity(type, x, y, this.canvas, evt);
+		},
 		get resolution(){
 			if (typeof this._resolution == "undefined") this._resolution = window.devicePixelRatio || 1;
 			return this._resolution;

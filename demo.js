@@ -4,7 +4,46 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 	window.tweener = tweener;
 
 	var Demo = function(){
-		this.setupRenderer().setupChart().setupControls();
+		this.setupRenderer();
+
+		var sprite1 = new pixton.Sprite(new pixton.Texture("https://biogram.atlassian.net/wiki/images/icons/profilepics/default.png?noRedirect=true"));
+		sprite1.interactive = sprite1.buttonMode = true;
+
+		var sprite2 = new pixton.Sprite(new pixton.Texture("https://biogram.atlassian.net/wiki/images/icons/profilepics/default.png?noRedirect=true"));
+		sprite2.interactive = sprite2.buttonMode = true;
+		
+		var sprite3 = new pixton.Sprite(new pixton.Texture("https://biogram.atlassian.net/wiki/images/icons/profilepics/default.png?noRedirect=true"));
+		sprite3.interactive = sprite3.buttonMode = true;
+		
+		var container = new pixton.Container();
+
+		container.addChild(sprite1, sprite2);
+
+		this.pixton.root.addChild(sprite3);
+		this.pixton.root.addChild(container);
+
+		container.y = 300;
+		sprite2.x = 300;
+
+		tweener.to(sprite3, 2, {
+			x : 50,
+			repeat : -1,
+			yoyo : true,
+			ease: "easeOutQuad"
+		});
+
+		sprite1.callbacks.add("pointerover", function(evt, eventType){
+			console.log(evt, eventType);
+		});
+
+		sprite3.callbacks.add("pointerout", function(evt, eventType){
+			console.log(evt, eventType);
+		});
+
+		sprite2.callbacks.add("pointertap", function(){
+			console.log("Hello world");
+		});
+
 	};
 
 	Demo.prototype = {
