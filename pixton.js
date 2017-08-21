@@ -210,11 +210,9 @@ define(function(){
 		render : {
 			value : function(parent, context){
 				this.children.iterate(function(child, index){
+					// console.log(child);
 					child.render(this, context);
 				}, this);
-				// for (var a = 0; a < this.children.size; a++){
-				// 	this.children[a].render(this, context);
-				// }
 			},
 			writable : true,
 			configurable : true
@@ -327,7 +325,9 @@ define(function(){
 				this.lineColor = color;
 
 				return this;
-			}
+			},
+			writable : true,
+			configurable : true
 		},
 		drawRect : {
 			value : function(x, y, w, h){
@@ -364,13 +364,23 @@ define(function(){
 				return this;
 			},
 		},
+		drawPolygon : {
+			value : function(){}
+		},
+		closePath : {
+			value : function(){
+				this.activePath = null;
+			}
+		},
 		beginFill : {
 			value : function(color, alpha){
 				this.fillAlpha = alpha;
 				this.fillColor = color;
 
 				return this;
-			}
+			},
+			writable : true,
+			configurable : true
 		},	
 		endFill : {
 			value : function(){
@@ -518,15 +528,32 @@ define(function(){
 		this.size = new Point(options.width || 500, options.height || 500);
 	};
 
+	Pixton.tools = new Tools;
+	Pixton.Node = Pixton.Container = Node;
+	Pixton.Sprite = Sprite;
+	Pixton.Point = Point;
+	Pixton.Texture = Texture;
+	Pixton.Graphics = Graphics;
+	Pixton.Text = Text;
+	Pixton.TokensCollection = TokensCollection;
+
 	Pixton.prototype = {
 		tools : new Tools,
 		Node : Node,
+		Container : Node,
 		Sprite : Sprite,
 		Point : Point,
 		Texture : Texture,
 		Graphics : Graphics,
 		Text : Text,
 		TokensCollection : TokensCollection,
+		get resolution(){
+			if (typeof this._resolution == "undefined") this._resolution = window.devicePixelRatio || 1;
+			return this._resolution;
+		},
+		set resolution(value){
+			this._resolution = value;
+		},
 		resize : function(w, h){
 			this.size.x = w;
 			this.size.y = h;
