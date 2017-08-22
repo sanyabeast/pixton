@@ -444,7 +444,11 @@ define(function(){
 
 	var Sprite = tools.inheritCLASS(Node, {
 		constructor : function(texture){
-			this.texture = texture;
+			if (texture instanceof Texture){
+				this.texture = texture;
+			} else if (typeof texture == "string"){
+				this.texture = new Texture(texture);
+			}		
 		},
 		render : {
 			value : function(parent, context, dx, dy, dsx, dsy){
@@ -460,7 +464,7 @@ define(function(){
 
 				if (!this.texture.loaded) return;
 
-				context.drawImage(this.texture.image, dx * dsx, dy * dsy, this.texture.width * dsx, this.texture.height * dsy);
+				context.drawImage(this.texture.image, dx, dy, this.texture.width * dsx, this.texture.height * dsy);
 				this.size._x = this.texture.width * this.scale.x;
 				this.size._y = this.texture.height * this.scale.y;
 			}
@@ -850,9 +854,9 @@ define(function(){
 				}
 
 				element.testEvent = new Event("mousemove");
-				element.customEventCheckingID = setInterval(function(){
-					element.dispatchEvent(element.testEvent);
-				}, this.options.interactionFreq || 250);
+				// element.customEventCheckingID = setInterval(function(){
+				// 	element.dispatchEvent(element.testEvent);
+				// }, this.options.interactionFreq || 250);
 
 				this.interactionElement = element;
 

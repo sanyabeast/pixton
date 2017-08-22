@@ -6,108 +6,44 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 	var Demo = function(){
 		this.setupRenderer();
 
-		var sprite1 = new pixton.Sprite(new pixton.Texture("http://bio-gram.com/assets/svg/logo-en.svg"));
+		var sprite1 = new pixton.Sprite(new pixton.Texture("res/fruits/cherry.png"));
+		sprite1.scale.set(0.35);
 		sprite1.interactive = sprite1.buttonMode = true;
 
-		var sprite2 = new pixton.Sprite(new pixton.Texture("http://bio-gram.com/assets/svg/logo-en.svg"));
-		//sprite2.interactive = sprite2.buttonMode = true;
-		
-		var sprite3 = new pixton.Sprite(new pixton.Texture("http://bio-gram.com/assets/svg/logo-en.svg"));
-		//sprite3.interactive = sprite3.buttonMode = true;
-		
+		this.pixton.addChild(sprite1);
+
+		window.sprite1 = sprite1;
+
+		sprite1.callbacks.add("pointertap", function(){
+			console.log("Hello");
+		});
+
+		tweener.to(sprite1, 2, {
+			x : 300,
+			repeat : -1,
+			yoyo : true,
+			ease : "easeInCubic"
+		});
+
 		var container = new pixton.Container();
 
-		container.addChild(sprite1, sprite2);
+		var sprite2 = new pixton.Sprite("res/fruits/kiwi.png");
 
-		this.pixton.addChild(sprite3);
-		this.pixton.addChild(container);
+		container.addChild(sprite2);
 
-		container.y = 300;
-		sprite2.x = 300;
+		window.sprite2 = sprite2;
 
-		// tweener.to(sprite3, 2, {
-		// 	x : 50,
-		// 	repeat : -1,
-		// 	yoyo : true,
-		// 	ease: "easeOutQuad"
-		// });
+		sprite2.scale.set(0.35);
 
-		// sprite1.callbacks.add("pointerover", function(evt, eventType){
-		// 	console.log(evt, eventType);
-		// });
+		container.y = 500;
+		container.x = 400;
 
-		// sprite3.callbacks.add("pointerout", function(evt, eventType){
-		// 	console.log(evt, eventType);
-		// });
-
-		// sprite2.callbacks.add("pointertap", function(){
-		// 	console.log("Hello world");
-		// });
-
-		var text = new pixton.Text("000000", {
-			fontSize : "64px",
-			color : "#000000"
-		});
-
-		pixton.addChild(text);
-
-		window.text = text;
-		text.y = 150;
-
-		window.sprite1 =sprite1;
 		window.container = container;
 
-		var graphics = new pixton.Graphics();
+		container.interactive = true;
+		container.buttonMode = true;
 
-		graphics.beginFill("#000000", 1);
-		graphics.drawCircle(10, 10, 10);
-		container.addChild(graphics);
-
-		graphics.y = 300;
-		graphics.x = 150;
-		//graphics.interactive = true;
-		graphics.buttonMode = true;
-
-		graphics.callbacks.add("pointerover", function(eventData){
-			console.log(eventData);
-		});
-
-		graphics.callbacks.add("pointerout", function(eventData){
-			console.log(eventData);
-		});
-
-		graphics.callbacks.add("pointertap", function(eventData){
-			console.log(eventData);
-		});
-
-		graphics.callbacks.add("pointerdown", function(eventData){
-			console.log(eventData);
-		});
-
-		graphics.callbacks.add("pointerup", function(eventData){
-			console.log(eventData);
-		});
-
-		graphics.callbacks.add("pointermove", function(eventData){
-			console.log(eventData);
-		});
-
-		graphics.callbacks.add("pointerdownoutside", function(eventData){
-			console.log(eventData);
-		});
-
-		graphics.callbacks.add("pointerupoutside", function(eventData){
-			console.log(eventData);
-		});
-
-		graphics.callbacks.add("pointertapoutside", function(eventData){
-			console.log(eventData);
-		});
-
-		sprite3.visible = false;
-		sprite2.visible = false;
-
-		window.graphics = graphics;
+		this.pixton.addChild(container);
 
 	};
 
