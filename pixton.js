@@ -886,10 +886,10 @@ define(function(){
 		},
 		resize : {
 			value : function(w, h){
-				this.size.x = w;
-				this.size.y = h;
-				this.canvas.width = this.xCanvas.width = w;
-				this.canvas.height = this.xCanvas.height = h;
+				this.size.x = w * this.resolution;
+				this.size.y = h * this.resolution;
+				this.canvas.width = this.xCanvas.width = w * this.resolution;
+				this.canvas.height = this.xCanvas.height = h * this.resolution;
 			}
 		},
 		render : {
