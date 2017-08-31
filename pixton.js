@@ -233,6 +233,9 @@ define(function(){
 			this.anchor = new Point(0, 0);
 			this.classes = new TokensCollection(options.classes);
 			this.callbacks = new TokensList();
+			this.debug = {
+				metrics : false,
+			};
 
 			this.eventData = {
 				originalEvent : null,
@@ -510,7 +513,7 @@ define(function(){
 			this.activePath = null;
 
 			this.fillAlpha = 1;
-			this.fillColor = "#000000";
+			this.fillColor = "#000000";Graphics
 
 			this.lineAlpha = 1;
 			this.lineColor = "#000000";
@@ -718,14 +721,20 @@ define(function(){
 						break;
 						case "rect":
 							context.beginPath();
-							context.lineWidth = current.lineWidth || 0;
-							context.strokeStyle = current.lineColor;
 							context.globalAlpha = current.lineAlpha || 1;
 							context.rect((dx + current.x) * dsx, (dy + current.y) * dsy, current.w * dsx, current.h * dsy);
-							context.stroke();
 							context.fillStyle = current.fillColor;
 							context.globalAlpha = current.fillAlpha || 1;
 							context.fillRect(dx + current.x, dy + current.y, current.w, current.h);
+
+							if (current.lineWidth){
+								context.lineWidth = current.lineWidth || 0;
+								context.globalAlpha = current.lineAlpha;
+								context.strokeStyle = current.lineColor;
+								context.stroke();
+							}
+
+							
 
 							if ((dx + current.x) * dsx + current.w * dsx > sw) sw = (dx + current.x) * dsx + current.w * dsx;
 							if ((dy + current.y) * dsy + current.h * dsy > sh) sh = (dy + current.y) * dsy + current.h * dsy;
@@ -741,10 +750,15 @@ define(function(){
 							context.fillStyle = current.fillColor;
 							context.globalAlpha = current.fillAlpha || 1;
 							context.fill();
-							context.lineWidth = current.lineWidth || 0;
-							context.globalAlpha = current.lineAlpha || 1;
-							context.strokeStyle = current.lineColor;
-							context.stroke();
+
+							if (current.lineWidth){
+								context.lineWidth = current.lineWidth || 0;
+								context.globalAlpha = current.lineAlpha || 1;
+								context.strokeStyle = current.lineColor;
+								context.stroke();
+							}
+
+							
 
 							if ((current.x) * dsx + current.radius * dsx > sw) sw = (current.x) * dsx + current.radius * dsx;
 							if ((current.y) * dsy + current.radius * dsy > sh) sh = (current.y) * dsy + current.radius * dsy;
@@ -757,6 +771,14 @@ define(function(){
 					this.size._y = sh;
 
 				}, this);
+
+				if (this.debug.metrics){
+					context.lineWidth = 1;
+					context.strokeStyle = "#ffffff";
+					context.rect(this.x, this.y, sw, sh);
+					context.stroke();
+				}
+
 			}
 		}
 	});
