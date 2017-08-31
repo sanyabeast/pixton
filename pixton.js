@@ -230,6 +230,7 @@ define(function(){
 			this.position = new Point();
 			this.scale = new Point(1, 1);
 			this.size = new Point(1, 1);
+			this.anchor = new Point(0, 0);
 			this.classes = new TokensCollection(options.classes);
 			this.callbacks = new TokensList();
 
@@ -238,6 +239,12 @@ define(function(){
 				pointer : {
 					x : 0,
 					y : 0
+				},
+				extra : {
+					deltaX : 0,
+					deltaY : 0,
+					prevX : 0,
+					prevY : 0
 				},
 				type : null,
 				target : this
@@ -290,59 +297,85 @@ define(function(){
 				this.eventData.originalEvent = evt;
 				this.eventData.pointer.x = x;
 				this.eventData.pointer.y = y;
-				this.eventData.type = eventType;
+				// thsis.eventData.type = eventType;
+
+				this.eventData.extra.deltaX = x - this.eventData.extra.prevX;
+				this.eventData.extra.deltaY = y - this.eventData.extra.prevY;
+
+				this.eventData.extra.prevX = x;
+				this.eventData.extra.prevY = x;
 
 				if (eventType == "pointerout"){
-					this.hovered = this.captured = false;
+					this.hovered = false;
 					return;
 				}
 
 				if (eventType == "pointermove" && inside && !this.hovered){
 					if (this.buttonMode) canvas.style.cursor = "pointer";
 					this.hovered = true;
-					if (this.callbacks.contains("pointerover")) this.callbacks.get("pointerover")(this.eventData);
+					this.runCallback("pointerover");
+					//if (this.callbacks.contains("pointerover")) this.callbacks.get("pointerover")(this.eventData);
 				}
 
 				if (eventType == "pointermove" && !inside && this.hovered){
 					if (this.buttonMode) canvas.style.cursor = "default";
-										console.log(canvas.style.cursor);
-
 					this.hovered = false;
-					if (this.callbacks.contains("pointerout")) this.callbacks.get("pointerout")(this.eventData);
+					this.runCallback("pointerout");
+					// if (this.callbacks.contains("pointerout")) this.callbacks.get("pointerout")(this.eventData);
 				}
 
 				if (eventType == "pointermove" && inside && this.hovered){
-					if (this.callbacks.contains("pointermove")) this.callbacks.get("pointermove")(this.eventData);
+					this.runCallback("pointermove");
+					// if (this.callbacks.contains("pointermove")) this.callbacks.get("pointermove")(this.eventData);
 				}
 
 				if (eventType == "pointertap" && this.hovered && inside){
-					if (this.callbacks.contains("pointertap")) this.callbacks.get("pointertap")(this.eventData);
+					this.runCallback("pointertap");
+					// if (this.callbacks.contains("pointertap")) this.callbacks.get("pointertap")(this.eventData);
 				}
 
 				if (eventType == "pointerdown" && this.hovered && inside){
 					this.captured = true;
-					if (this.callbacks.contains("pointerdown")) this.callbacks.get("pointerdown")(this.eventData);
+					this.runCallback("pointerdown");
+					// if (this.callbacks.contains("pointerdown")) this.callbacks.get("pointerdown")(this.eventData);
 				}
 
 				if (eventType == "pointerup" && this.hovered && inside){
 					this.captured = false;
-					if (this.callbacks.contains("pointerup")) this.callbacks.get("pointerup")(this.eventData);
+					this.runCallback("pointerup");
+					// if (this.callbacks.contains("pointerup")) this.callbacks.get("pointerup")(this.eventData);
 				}
 
 				if (eventType == "pointerup" && this.hovered && !inside){
 					this.hovered = this.captured = false;
-					if (this.callbacks.contains("pointerupoutside")) this.callbacks.get("pointerupoutside")(this.eventData);
+					this.runCallback("pointerupoutside");
+					// if (this.callbacks.contains("pointerupoutside")) this.callbacks.get("pointerupoutside")(this.eventData);
 				}
 
 				if (eventType == "pointerdown" && !inside){
 					this.hovered = this.captured = false;
-					if (this.callbacks.contains("pointerdownoutside")) this.callbacks.get("pointerdownoutside")(this.eventData);
+					this.runCallback("pointerdownoutside");
+					// if (this.callbacks.contains("pointerdownoutside")) this.callbacks.get("pointerdownoutside")(this.eventData);
 				}
 
 				if (eventType == "pointertap" && !inside){
 					this.hovered = this.captured = false;
-					if (this.callbacks.contains("pointertapoutside")) this.callbacks.get("pointertapoutside")(this.eventData);
+					this.runCallback("pointertapoutside");
+					// if (this.callbacks.contains("pointertapoutside")) this.callbacks.get("pointertapoutside")(this.eventData);
 				}
+
+				if (eventType == "pointermove" && this.captured){
+					//this.hovered = this.captured = false;
+					this.runCallback("pointerdrag");
+					// if (this.callbacks.contains("pointerdrag")) this.callbacks.get("pointerdrag")(this.eventData);
+				}
+
+			}
+		},
+		runCallback : {
+			value :  function(eventName){
+				// this.eventData.type = eventName;
+				if (this.callbacks.contains(eventName)) this.callbacks.get(eventName)(this.eventData, eventName);
 			}
 		},
 		tools : {
@@ -864,14 +897,16 @@ define(function(){
 		},
 		_onUserEvent : {
 			value : function(evt){
-				var type = this.events[evt.type];
+				var eventType = this.events[evt.type];
 
-				if (type == "pointermove") this.interactionElement.testEvent = evt;
+				if (eventType == "pointermove") this.interactionElement.testEvent = evt;
 
 				var x = evt.offsetX;
 				var y = evt.offsetY;
 
-				this.checkInteractivity(type, x, y, this.canvas, evt, 0, 0);
+				if (this.interactive) this.processInteractivity(eventType, x, y, this.canvas, evt, this.position.x, this.position.y);
+
+				this.checkInteractivity(eventType, x, y, this.canvas, evt, 0, 0);
 			},
 			writable : true
 		},
