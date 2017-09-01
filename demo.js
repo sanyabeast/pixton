@@ -74,8 +74,16 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 			graphics2.y += evt.extra.deltaY;
 		});	
 
+		container.interactive = true;
+		container.callbacks.add("pointerdrag", function(evt){
+			container.x += evt.extra.deltaX;
+			container.y += evt.extra.deltaY;
+		});
+
 		graphics2.x = 150;
 		graphics2.y = 150;
+
+		window.graphics2 = graphics2;
 
 	};
 

@@ -107,6 +107,12 @@ define(function(){
 			writable : true,
 			configurable : true
 		},
+		removeByIndex : {
+			value : function(index){
+				tools.removeFromArrByIndex(this.content, index);
+				this.content.size = this.content.length;
+			}
+		},
 		iterate : {
 			value : function(callback, context){
 				var result;
@@ -127,6 +133,25 @@ define(function(){
 			},
 			writable : true,
 			configurable : true
+		},
+		reverseIterate : {
+			value : function(callback, context){
+				var result;
+				this.loop.break = this.loop.continue = false;
+
+				for (var a = this.content.size - 1; a >= 0; a--){
+					if (context){
+						result = callback.call(context, this.content[a], a, this.loop);
+					} else {
+						result = callback(this.content[a], a, this.loop);
+					}
+
+					if (this.loop.break) break;
+				}
+
+				return result;
+
+			},
 		},
 		contains : {
 			value : function(value){
@@ -263,6 +288,14 @@ define(function(){
 			};
 
 		},
+		childIndex : {
+			get : function(){
+				return this._childIndex;
+			},	
+			set : function(value){
+				this._childIndex = value;
+			}
+		},
 		type : {
 			get : function(){
 				return "node";
@@ -311,20 +344,31 @@ define(function(){
 			}
 		},
 		checkInteractivity : {
-			value : function(eventType, x, y, canvas, evt, dx, dy){
+			value : function(eventType, x, y, canvas, evt, dx, dy, dispatched){
 				dx += this.calculated.position.x;
 				dy += this.calculated.position.y;
 
-				if (this.interactive) this.processInteractivity(eventType, x, y, canvas, evt, dx, dy);
+				var result = false;
 
-				this.children.iterate(function(child){
-					child.checkInteractivity(eventType, x, y, canvas, evt, dx, dy);
+				if (this.interactive && !dispatched){
+					result = this.processInteractivity(eventType, x, y, canvas, evt, dx, dy);
+				} 		
+
+				dispatched = false;
+
+				this.children.reverseIterate(function(child, id, loop){
+					if (child.checkInteractivity(eventType, x, y, canvas, evt, dx, dy, dispatched)){
+						dispatched = true;
+					}
 				}, this);
+
+				return result;
 			}
 		},
 		processInteractivity : {
 			value : function(eventType, x, y, canvas, evt, dx, dy){
 				var inside = tools.coordsBelognsRect(x, y, dx, dy, this.size.x, this.size.y);
+				var result = false;
 
 				this.eventData.originalEvent = evt;
 				this.eventData.pointer.x = x;
@@ -339,76 +383,80 @@ define(function(){
 
 				if (eventType == "pointerout"){
 					this.hovered = false;
-					return;
 				}
 
 				if (eventType == "pointermove" && inside && !this.hovered){
 					if (this.buttonMode) canvas.style.cursor = "pointer";
 					this.hovered = true;
-					this.runCallback("pointerover");
-					console.log(this.type, this);
+					result = this.runCallback("pointerover");
 					//if (this.callbacks.contains("pointerover")) this.callbacks.get("pointerover")(this.eventData);
 				}
 
 				if (eventType == "pointermove" && !inside && this.hovered){
 					if (this.buttonMode) canvas.style.cursor = "default";
 					this.hovered = false;
-					this.runCallback("pointerout");
+					result = this.runCallback("pointerout");
 					// if (this.callbacks.contains("pointerout")) this.callbacks.get("pointerout")(this.eventData);
 				}
 
 				if (eventType == "pointermove" && inside && this.hovered){
-					this.runCallback("pointermove");
+					result = this.runCallback("pointermove");
 					// if (this.callbacks.contains("pointermove")) this.callbacks.get("pointermove")(this.eventData);
 				}
 
 				if (eventType == "pointertap" && this.hovered && inside){
-					this.runCallback("pointertap");
+					result = this.runCallback("pointertap");
 					// if (this.callbacks.contains("pointertap")) this.callbacks.get("pointertap")(this.eventData);
 				}
 
 				if (eventType == "pointerdown" && this.hovered && inside){
 					this.captured = true;
-					this.runCallback("pointerdown");
+					result = this.runCallback("pointerdown");
 					// if (this.callbacks.contains("pointerdown")) this.callbacks.get("pointerdown")(this.eventData);
 				}
 
 				if (eventType == "pointerup" && this.hovered && inside){
 					this.captured = false;
-					this.runCallback("pointerup");
+					result = this.runCallback("pointerup");
 					// if (this.callbacks.contains("pointerup")) this.callbacks.get("pointerup")(this.eventData);
 				}
 
-				if (eventType == "pointerup" && this.hovered && !inside){
+				if (eventType == "pointerup" && !inside){
 					this.hovered = this.captured = false;
-					this.runCallback("pointerupoutside");
+					result = this.runCallback("pointerupoutside");
 					// if (this.callbacks.contains("pointerupoutside")) this.callbacks.get("pointerupoutside")(this.eventData);
 				}
 
 				if (eventType == "pointerdown" && !inside){
 					this.hovered = this.captured = false;
-					this.runCallback("pointerdownoutside");
+					result = this.runCallback("pointerdownoutside");
 					// if (this.callbacks.contains("pointerdownoutside")) this.callbacks.get("pointerdownoutside")(this.eventData);
 				}
 
 				if (eventType == "pointertap" && !inside){
 					this.hovered = this.captured = false;
-					this.runCallback("pointertapoutside");
+					result = this.runCallback("pointertapoutside");
 					// if (this.callbacks.contains("pointertapoutside")) this.callbacks.get("pointertapoutside")(this.eventData);
 				}
 
 				if (eventType == "pointermove" && this.captured){
 					//this.hovered = this.captured = false;
-					this.runCallback("pointerdrag");
+					result = this.runCallback("pointerdrag");
 					// if (this.callbacks.contains("pointerdrag")) this.callbacks.get("pointerdrag")(this.eventData);
 				}
+
+				return result;
 
 			}
 		},
 		runCallback : {
 			value :  function(eventName){
-				// this.eventData.type = eventName;
-				if (this.callbacks.contains(eventName)) this.callbacks.get(eventName)(this.eventData, eventName);
+				if (this.callbacks.contains(eventName)) {
+					this.callbacks.get(eventName)(this.eventData, eventName);
+					return true;
+				}
+
+				return false;
 			}
 		},
 		tools : {
@@ -484,9 +532,15 @@ define(function(){
 
 				child.parent = this;
 				this.children.add(child);
+				child.childIndex = this.children.content.size - 1;
 
 				return this;
 			},
+		},
+		removeChild : {
+			value : function(child){
+				this.children.removeByIndex(child.childIndex);
+			}
 		},
 		matchClassSelector : {
 			value : function(selector){
