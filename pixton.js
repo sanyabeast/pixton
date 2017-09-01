@@ -304,13 +304,14 @@ define(function(){
 		},
 		drawDebug : {
 			value : function(context){
+				return;
 				var strokeStyle = context.strokeStyle;
 				context.lineWidth = 1;
-				context.strokeStyle = "#000000";
+				context.strokeStyle = "#ffffff";
 				context.rect(this.calculated.position.x, this.calculated.position.y, this.size.x, this.size.y);
 				context.stroke();
 				context.font = "16px Monospace";
-				context.fillStyle = "#000000";
+				context.fillStyle = "#ffffff";
 				context.fillText(this.type, this.calculated.position.x + 8, this.calculated.position.y + 16);
 				context.strokeStyle = strokeStyle;
 
@@ -386,6 +387,11 @@ define(function(){
 				this.eventData.extra.prevX = x;
 				this.eventData.extra.prevY = y;
 
+				if (this.matchClassSelector(".ul-point")){
+					console.log(this.captured);
+				}
+
+
 				if (eventType == "pointerout"){
 					this.hovered = false;
 				}
@@ -410,6 +416,7 @@ define(function(){
 				}
 
 				if (eventType == "pointertap" && this.hovered && inside){
+					this.captured = false;
 					result = this.runCallback("pointertap");
 					// if (this.callbacks.contains("pointertap")) this.callbacks.get("pointertap")(this.eventData);
 				}
@@ -420,7 +427,7 @@ define(function(){
 					// if (this.callbacks.contains("pointerdown")) this.callbacks.get("pointerdown")(this.eventData);
 				}
 
-				if (eventType == "pointerup" && this.hovered && inside){
+				if (eventType == "pointerup" && inside){
 					this.captured = false;
 					result = this.runCallback("pointerup");
 					// if (this.callbacks.contains("pointerup")) this.callbacks.get("pointerup")(this.eventData);
@@ -494,8 +501,8 @@ define(function(){
 					return;
 				}
 
-				dx += this.calculated.position.x;
-				dy += this.calculated.position.y;
+				dx += this.x;
+				dy += this.y;
 
 				dsx *= this.scale.x;
 				dsy *= this.scale.y;
