@@ -12,6 +12,9 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 
 		this.pixton.addChild(sprite1);
 
+		sprite1.classes.add("sprite");
+		sprite1.classes.add("kek");
+
 		window.sprite1 = sprite1;
 
 		sprite1.callbacks.add("pointertap", function(){
@@ -29,9 +32,14 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 
 		var sprite2 = new pixton.Sprite("res/fruits/kiwi.png");
 
+		sprite2.id  = "hello";
+
 		container.addChild(sprite2);
 
 		window.sprite2 = sprite2;
+
+		sprite2.classes.add("sprite");
+		sprite2.classes.add("kek");
 
 		sprite2.scale.set(0.35);
 

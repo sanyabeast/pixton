@@ -60,6 +60,9 @@ define(function(){
 			CLASS.prototype._prototype = prototype;
 
 			return CLASS;
+		},
+		joinArray : function(target, source){
+			return target.concat(source);
 		}
 	};
 
@@ -70,6 +73,7 @@ define(function(){
 	var TokensCollection = tools.CLASS({
 		constructor : function(content){
 			this.content = content;
+			if (content) this.content.size = content.length;
 			this.loop = { break : false, continue : false };
 		},
 		content : {
@@ -233,9 +237,9 @@ define(function(){
 			this.anchor = new Point(0, 0);
 			this.classes = new TokensCollection(options.classes);
 			this.callbacks = new TokensList();
-			this.debug = {
-				metrics : false,
-			};
+			this.debug = new TokensList();
+			this.selectorsCache = new TokensList();
+			this.id = options.id;
 
 			this.eventData = {
 				originalEvent : null,
@@ -253,6 +257,12 @@ define(function(){
 				target : this
 			};
 
+		},
+		type : {
+			get : function(){
+				return "node";
+			},
+			configurable : true
 		},
 		visible : {
 			get : function(){
@@ -390,7 +400,7 @@ define(function(){
 				return this._id;
 			},
 			set : function(id){
-				thi.id = id;
+				this._id = id;
 			}
 		},
 		x : {
@@ -443,6 +453,87 @@ define(function(){
 
 				return this;
 			},
+		},
+		matchClassSelector : {
+			value : function(selector){
+				var classes = selector.split(".");
+				var matches = 0;
+				var targetMatchCount = classes.length;
+
+				for (var a = 0; a < classes.length; a++){
+					if (classes[a].length == 0){
+						targetMatchCount--;
+						continue;
+					}
+
+					if (this.classes.contains(classes[a])){
+						matches++;
+					} else {
+						matches--;
+						break;
+					}
+
+				}
+
+				return matches > 0 && (matches == targetMatchCount);
+
+			}
+		},
+		matchIdSelector : {
+			value : function(selector){
+				return this.id == selector.split("#")[1];
+			}
+		},
+		matchSelector : {
+			value : function(selector){
+				if (selector.indexOf("#") == 0){
+					return this.matchIdSelector(selector);
+				} else if (selector.indexOf(".") > -1){
+					return this.matchClassSelector(selector);
+				}
+
+			},
+		},
+		selectIteration : {
+			value : function(selector){
+				var result = [];
+
+				this.children.iterate(function(child){
+					if (child.matchSelector(selector)){
+						result.push(child);
+					};
+
+					result = tools.joinArray(result, child.selectIteration(selector));
+				});
+
+				return result;
+
+			}
+		},
+		select : {
+			value : function(selector, cache, callback, context){
+				var result;
+
+				if (typeof cache == "function"){
+					context = callback;
+					callback = cache;
+					cache = true;
+				}
+
+				if (cache && this.selectorsCache.contains(selector)){
+					result = this.selectorsCache.get(selector);
+				} else {
+					result = new TokensCollection(this.selectIteration(selector));
+					this.selectorsCache.add(selector, result);
+				}
+
+				if (callback){
+					result.iterate(callback, context)
+				};
+
+				return result;
+
+			}
 		}
 	});
 
@@ -486,6 +577,12 @@ define(function(){
 				this.texture = new Texture(texture);
 			}		
 		},
+		type : {
+			get : function(){
+				return "sprite";
+			},
+			configurable : true
+		},
 		render : {
 			value : function(parent, context, dx, dy, dsx, dsy){
 				if (!this.visible){
@@ -521,6 +618,12 @@ define(function(){
 
 			this.lineJoin = "round";
 			this.lineCap = "round";
+		},
+		type : {
+			get : function(){
+				return "graphics";
+			},
+			configurable : true
 		},
 		lineTo : {
 			value : function(x, y){
@@ -772,7 +875,8 @@ define(function(){
 
 				}, this);
 
-				if (this.debug.metrics){
+
+				if (true || this.debug.content.metrics){
 					context.lineWidth = 1;
 					context.strokeStyle = "#ffffff";
 					context.rect(this.x, this.y, sw, sh);
@@ -787,6 +891,12 @@ define(function(){
 		constructor : function(text, styles){
 			this._text = text;
 			this.styles = styles;
+		},
+		type : {
+			get : function(){
+				return "text";
+			},
+			configurable : true
 		},
 		styles : {
 			get : function(){
