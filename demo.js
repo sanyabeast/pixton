@@ -76,6 +76,7 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 
 		container.interactive = true;
 		container.callbacks.add("pointerdrag", function(evt){
+			console.log("CONTAINER");
 			container.x += evt.extra.deltaX;
 			container.y += evt.extra.deltaY;
 		});

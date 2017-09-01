@@ -348,6 +348,11 @@ define(function(){
 				dx += this.calculated.position.x;
 				dy += this.calculated.position.y;
 
+
+				if (dispatched){
+					return;
+				}
+
 				var result = false;
 
 				if (this.interactive && !dispatched){
