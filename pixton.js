@@ -241,6 +241,11 @@ define(function(){
 			this.selectorsCache = new TokensList();
 			this.id = options.id;
 
+			this.calculated = {
+				size : this.size,
+				position : new Point(1, 1)
+			};
+
 			this.eventData = {
 				originalEvent : null,
 				pointer : {
@@ -263,6 +268,20 @@ define(function(){
 				return "node";
 			},
 			configurable : true
+		},
+		drawDebug : {
+			value : function(context){
+				var strokeStyle = context.strokeStyle;
+				context.lineWidth = 1;
+				context.strokeStyle = "#000000";
+				context.rect(this.calculated.position.x, this.calculated.position.y, this.size.x, this.size.y);
+				context.stroke();
+				context.font = "16px Monospace";
+				context.fillStyle = "#000000";
+				context.fillText(this.type, this.calculated.position.x + 8, this.calculated.position.y + 16);
+				context.strokeStyle = strokeStyle;
+
+			}
 		},
 		visible : {
 			get : function(){
@@ -293,8 +312,8 @@ define(function(){
 		},
 		checkInteractivity : {
 			value : function(eventType, x, y, canvas, evt, dx, dy){
-				dx += this.x;
-				dy += this.y;
+				dx += this.calculated.position.x;
+				dy += this.calculated.position.y;
 
 				if (this.interactive) this.processInteractivity(eventType, x, y, canvas, evt, dx, dy);
 
@@ -316,7 +335,7 @@ define(function(){
 				this.eventData.extra.deltaY = y - this.eventData.extra.prevY;
 
 				this.eventData.extra.prevX = x;
-				this.eventData.extra.prevY = x;
+				this.eventData.extra.prevY = y;
 
 				if (eventType == "pointerout"){
 					this.hovered = false;
@@ -327,6 +346,7 @@ define(function(){
 					if (this.buttonMode) canvas.style.cursor = "pointer";
 					this.hovered = true;
 					this.runCallback("pointerover");
+					console.log(this.type, this);
 					//if (this.callbacks.contains("pointerover")) this.callbacks.get("pointerover")(this.eventData);
 				}
 
@@ -421,8 +441,8 @@ define(function(){
 					return;
 				}
 
-				dx += this.x;
-				dy += this.y;
+				dx += this.calculated.position.x;
+				dy += this.calculated.position.y;
 
 				dsx *= this.scale.x;
 				dsy *= this.scale.y;
@@ -433,10 +453,24 @@ define(function(){
 					child.render(this, context, dx, dy, dsx, dsy);
 					if (child.x + child.size.x > sw) sw = child.x + child.size.x;
 					if (child.y + child.size.y > sh) sh = child.y + child.size.y;
+					if (child.x < 0){
+						this.calculated.position.x += child.calculated.position.x
+					} else {
+						this.calculated.position.x = this.position.x;
+					}
+
+					if (child.y < 0){
+						this.calculated.position.y += child.calculated.position.y
+					} else {
+						this.calculated.position.y = this.position.y;
+					}
 				}, this);
 
 				this.size.x = sw;
 				this.size.y = sh;
+
+				this.drawDebug(context);
+
 			},
 			writable : true,
 			configurable : true
@@ -576,6 +610,7 @@ define(function(){
 			} else if (typeof texture == "string"){
 				this.texture = new Texture(texture);
 			}		
+
 		},
 		type : {
 			get : function(){
@@ -592,6 +627,9 @@ define(function(){
 				dx += this.x;
 				dy += this.y;
 
+				this.calculated.position.x = dx;
+				this.calculated.position.y = dy;
+
 				dsx *= this.scale.x;
 				dsy *= this.scale.y;
 
@@ -600,6 +638,9 @@ define(function(){
 				context.drawImage(this.texture.image, dx, dy, this.texture.width * dsx, this.texture.height * dsy);
 				this.size._x = this.texture.width * this.scale.x;
 				this.size._y = this.texture.height * this.scale.y;
+
+				this.drawDebug(context);
+
 			}
 		}
 	});
@@ -814,6 +855,9 @@ define(function(){
 
 				var sw = 0, sh = 0;
 
+				this.calculated.position.x = this.position.x;
+				this.calculated.position.y = this.position.y;
+
 				this.primitives.iterate(function(current, index){
 					switch(current.type){
 						case "path":
@@ -846,7 +890,7 @@ define(function(){
 						case "circle":
 						  	context.save();
 							context.beginPath();
-							context.translate((dx + current.x) * dsx, (dy + current.y) * dsy);
+							context.translate((dx + current.x), (dy + current.y));
 							context.scale(dsx, dsy);
 							context.arc(0, 0, current.radius, 0, 2 * Math.PI, false);
 							context.restore();
@@ -863,9 +907,20 @@ define(function(){
 
 							
 
-							if ((current.x) * dsx + current.radius * dsx > sw) sw = (current.x) * dsx + current.radius * dsx;
-							if ((current.y) * dsy + current.radius * dsy > sh) sh = (current.y) * dsy + current.radius * dsy;
+							if ((current.x) + current.radius * 2 > sw) sw = (current.x) + (current.radius * 2);
+							if ((current.y) + current.radius * 2 > sh) sh = (current.y) + (current.radius * 2);
 
+							if (current.x < current.radius){
+								if (this.x + current.x - current.radius < this.calculated.position.x) {
+									this.calculated.position.x = this.x + (current.x - current.radius)
+								}
+							}
+
+							if (current.y < current.radius){
+								if (this.y + current.y - current.radius < this.calculated.position.y) {
+									this.calculated.position.y = this.y + (current.y - current.radius)
+								}
+							}
 
 						break;
 					}
@@ -876,12 +931,8 @@ define(function(){
 				}, this);
 
 
-				if (true || this.debug.content.metrics){
-					context.lineWidth = 1;
-					context.strokeStyle = "#ffffff";
-					context.rect(this.x, this.y, sw, sh);
-					context.stroke();
-				}
+				this.drawDebug(context);
+
 
 			}
 		}
@@ -1036,7 +1087,7 @@ define(function(){
 				var x = evt.offsetX;
 				var y = evt.offsetY;
 
-				if (this.interactive) this.processInteractivity(eventType, x, y, this.canvas, evt, this.position.x, this.position.y);
+				if (this.interactive) this.processInteractivity(eventType, x, y, this.canvas, evt, this.calculated.position.x, this.calculated.position.y);
 
 				this.checkInteractivity(eventType, x, y, this.canvas, evt, 0, 0);
 			},

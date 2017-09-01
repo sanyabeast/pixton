@@ -21,12 +21,14 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 			console.log("Hello");
 		});
 
-		tweener.to(sprite1, 2, {
-			x : 300,
-			repeat : -1,
-			yoyo : true,
-			ease : "easeInCubic"
-		});
+		// tweener.to(sprite1, 2, {
+		// 	x : 300,
+		// 	repeat : -1,
+		// 	yoyo : true,
+		// 	ease : "easeInCubic"
+		// });
+
+		sprite1.x = 300;
 
 		var container = new pixton.Container();
 
@@ -51,7 +53,29 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 		container.interactive = true;
 		container.buttonMode = true;
 
-		this.pixton.addChild(container);
+		var container2 = new pixton.Container();
+
+		container2.addChild(container);
+
+		this.pixton.addChild(container2);
+
+		var graphics2 = new pixton.Graphics();
+		graphics2.beginFill("#ff00ff");
+		graphics2.drawCircle(0, 0, 40, 40);
+
+		graphics2.beginFill("#00ff00");
+		graphics2.drawCircle(0,0,15, 15)
+
+		pixton.addChild(graphics2);
+
+		graphics2.interactive = graphics2.buttonMode = true;
+		graphics2.callbacks.add("pointerdrag", function(evt){
+			graphics2.x += evt.extra.deltaX;
+			graphics2.y += evt.extra.deltaY;
+		});	
+
+		graphics2.x = 150;
+		graphics2.y = 150;
 
 	};
 
