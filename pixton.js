@@ -63,6 +63,15 @@ define(function(){
 		},
 		joinArray : function(target, source){
 			return target.concat(source);
+		},
+		transCoord : function(coord, srcResolution, targetResolution){
+			return coord * (targetResolution / srcResolution);
+		},
+		calcOffsetX : function(){
+
+		},
+		calcOffsetY : function(){
+			
 		}
 	};
 
@@ -529,7 +538,7 @@ define(function(){
 				this.size.x = sw;
 				this.size.y = sh;
 
-				this.drawDebug(context);
+				// this.drawDebug(context);
 
 			},
 			writable : true,
@@ -705,7 +714,7 @@ define(function(){
 				this.size._x = this.texture.width * this.scale.x;
 				this.size._y = this.texture.height * this.scale.y;
 
-				this.drawDebug(context);
+				// this.drawDebug(context);
 
 			}
 		}
@@ -997,7 +1006,7 @@ define(function(){
 				}, this);
 
 
-				this.drawDebug(context);
+				// this.drawDebug(context);
 
 
 			}
@@ -1061,6 +1070,7 @@ define(function(){
 		constructor : function(options){
 			this.options = options = (options || {});
 			this.canvas = options.canvas || document.createElement("canvas");
+			this.canvas.classList.add("pixton");
 			this.xCanvas = document.createElement("canvas");
 
 			this.ctx = this.canvas.getContext("2d");
@@ -1150,8 +1160,8 @@ define(function(){
 
 				if (eventType == "pointermove") this.interactionElement.testEvent = evt;
 
-				var x = evt.offsetX;
-				var y = evt.offsetY;
+				var x = tools.transCoord(evt.offsetX, this.interactionElement.clientWidth, this.canvas.width);
+				var y = tools.transCoord(evt.offsetY, this.interactionElement.clientHeight, this.canvas.height);
 
 				if (this.interactive) this.processInteractivity(eventType, x, y, this.canvas, evt, this.calculated.position.x, this.calculated.position.y);
 
@@ -1174,6 +1184,17 @@ define(function(){
 				this.size.y = h * this.resolution;
 				this.canvas.width = this.xCanvas.width = w * this.resolution;
 				this.canvas.height = this.xCanvas.height = h * this.resolution;
+			}
+		},
+		resizeToFitParent : {
+			value : function(){
+				var parent = this.canvas.parentNode;
+				var resolution = window.devicePixelRatio;
+
+				if (parent){
+					this.resize(parent.clientWidth * resolution, parent.clientHeight * resolution);
+				}
+
 			}
 		},
 		render : {
