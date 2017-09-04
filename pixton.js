@@ -395,12 +395,7 @@ define(function(){
 
 				this.eventData.extra.prevX = x;
 				this.eventData.extra.prevY = y;
-
-				if (this.matchClassSelector(".ul-point")){
-					console.log(this.captured);
-				}
-
-
+				
 				if (eventType == "pointerout"){
 					this.hovered = false;
 				}
@@ -409,61 +404,50 @@ define(function(){
 					if (this.buttonMode) canvas.style.cursor = "pointer";
 					this.hovered = true;
 					result = this.runCallback("pointerover");
-					//if (this.callbacks.contains("pointerover")) this.callbacks.get("pointerover")(this.eventData);
 				}
 
 				if (eventType == "pointermove" && !inside && this.hovered){
 					if (this.buttonMode) canvas.style.cursor = "default";
 					this.hovered = false;
 					result = this.runCallback("pointerout");
-					// if (this.callbacks.contains("pointerout")) this.callbacks.get("pointerout")(this.eventData);
 				}
 
 				if (eventType == "pointermove" && inside && this.hovered){
 					result = this.runCallback("pointermove");
-					// if (this.callbacks.contains("pointermove")) this.callbacks.get("pointermove")(this.eventData);
 				}
 
 				if (eventType == "pointertap" && this.hovered && inside){
 					this.captured = false;
 					result = this.runCallback("pointertap");
-					// if (this.callbacks.contains("pointertap")) this.callbacks.get("pointertap")(this.eventData);
 				}
 
 				if (eventType == "pointerdown" && this.hovered && inside){
 					this.captured = true;
 					result = this.runCallback("pointerdown");
-					// if (this.callbacks.contains("pointerdown")) this.callbacks.get("pointerdown")(this.eventData);
 				}
 
 				if (eventType == "pointerup" && inside){
 					this.captured = false;
 					result = this.runCallback("pointerup");
-					// if (this.callbacks.contains("pointerup")) this.callbacks.get("pointerup")(this.eventData);
 				}
 
 				if (eventType == "pointerup" && !inside){
 					this.hovered = this.captured = false;
 					result = this.runCallback("pointerupoutside");
-					// if (this.callbacks.contains("pointerupoutside")) this.callbacks.get("pointerupoutside")(this.eventData);
 				}
 
 				if (eventType == "pointerdown" && !inside){
 					this.hovered = this.captured = false;
 					result = this.runCallback("pointerdownoutside");
-					// if (this.callbacks.contains("pointerdownoutside")) this.callbacks.get("pointerdownoutside")(this.eventData);
 				}
 
 				if (eventType == "pointertap" && !inside){
 					this.hovered = this.captured = false;
 					result = this.runCallback("pointertapoutside");
-					// if (this.callbacks.contains("pointertapoutside")) this.callbacks.get("pointertapoutside")(this.eventData);
 				}
 
 				if (eventType == "pointermove" && this.captured){
-					//this.hovered = this.captured = false;
 					result = this.runCallback("pointerdrag");
-					// if (this.callbacks.contains("pointerdrag")) this.callbacks.get("pointerdrag")(this.eventData);
 				}
 
 				return result;
