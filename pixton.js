@@ -1142,10 +1142,15 @@ define(function(){
 			value : function(evt){
 				var eventType = this.events[evt.type];
 
+				var bounds = this.interactionElement.getBoundingClientRect();
+
+				var x = evt.pageX - bounds.left;
+				var y = evt.pageY - bounds.top;
+
 				if (eventType == "pointermove") this.interactionElement.testEvent = evt;
 
-				var x = tools.transCoord(evt.offsetX, this.interactionElement.clientWidth, this.canvas.width);
-				var y = tools.transCoord(evt.offsetY, this.interactionElement.clientHeight, this.canvas.height);
+				x = tools.transCoord(x, this.interactionElement.clientWidth, this.canvas.width);
+				y = tools.transCoord(y, this.interactionElement.clientHeight, this.canvas.height);
 
 				if (this.interactive) this.processInteractivity(eventType, x, y, this.canvas, evt, this.calculated.position.x, this.calculated.position.y);
 
