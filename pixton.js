@@ -1152,7 +1152,7 @@ define(function(){
 
 				if (eventType == "pointermove"){
 
-					if (+new Date() - this.prevPointerEventTime < this.interactionFreq || 10){
+					if (+new Date() - this.prevPointerEventTime < (this.interactionFreq || 10)){
 						return;
 					} 
 
