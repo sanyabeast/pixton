@@ -397,7 +397,10 @@ define(function(){
 				this.eventData.extra.prevY = y;
 				
 				if (eventType == "pointerout"){
-					this.hovered = false;
+					if (this.hovered){
+						this.hovered = false;
+						result = this.runCallback("pointerout");
+					}
 				}
 
 				if (eventType == "pointermove" && inside && !this.hovered){
@@ -406,7 +409,7 @@ define(function(){
 					result = this.runCallback("pointerover");
 				}
 
-				if (eventType == "pointermove" && !inside && this.hovered){
+				if ((eventType == "pointermove") && !inside && this.hovered){
 					if (this.buttonMode) canvas.style.cursor = "default";
 					this.hovered = false;
 					result = this.runCallback("pointerout");
