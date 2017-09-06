@@ -1150,7 +1150,16 @@ define(function(){
 				var x = evt.pageX - bounds.left;
 				var y = evt.pageY - bounds.top;
 
-				if (eventType == "pointermove") this.interactionElement.testEvent = evt;
+				if (eventType == "pointermove"){
+
+					if (+new Date() - this.prevPointerEventTime < this.interactionFreq || 10){
+						return;
+					} 
+
+					this.prevPointerEventTime = +new Date();
+
+					this.interactionElement.testEvent = evt
+				};
 
 				x = tools.transCoord(x, this.interactionElement.clientWidth, this.canvas.width);
 				y = tools.transCoord(y, this.interactionElement.clientHeight, this.canvas.height);
