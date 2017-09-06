@@ -388,14 +388,20 @@ define(function(){
 				this.eventData.originalEvent = evt;
 				this.eventData.pointer.x = x;
 				this.eventData.pointer.y = y;
-				// thsis.eventData.type = eventType;
 
 				this.eventData.extra.deltaX = x - this.eventData.extra.prevX;
 				this.eventData.extra.deltaY = y - this.eventData.extra.prevY;
 
 				this.eventData.extra.prevX = x;
 				this.eventData.extra.prevY = y;
+
+				this.eventData.extra.wheelDeltaX = evt.wheelDeltaX || this.eventData.extra.wheelDeltaX;
+				this.eventData.extra.wheelDeltaY = evt.wheelDeltaY || this.eventData.extra.wheelDeltaY;
 				
+				if (eventType == "mousewheel"){
+					result = this.runCallback("mousewheel");
+				}
+
 				if (eventType == "pointerout"){
 					if (this.hovered){
 						this.hovered = false;
@@ -1096,16 +1102,18 @@ define(function(){
 			get : function(){
 				if (typeof this._events == "undefined"){
 					this._events = {
-						"mousemove"	 : "pointermove" 	,
-						"mouseover"	 : "pointerover" 	,
-						"mouseout"	 : "pointerout" 	,
-						"mousedown"	 : "pointerdown" 	,
-						"mouseup"	 : "pointerup" 		,
-						"click" 	 : "pointertap" 	,
-						"touchmove"	 : "pointermove"	,
-						"touchstart" : "pointerdown"	,
-						"touchend"	 : "pointerup"		,
-						"tap"		 : "pointertap"
+						"mousemove"	 		: "pointermove" 	,
+						"mouseover"	 		: "pointerover" 	,
+						"mouseout"	 		: "pointerout" 	,
+						"mousedown"	 		: "pointerdown" 	,
+						"mouseup"	 		: "pointerup" 		,
+						"click" 	 		: "pointertap" 	,
+						"touchmove"	 		: "pointermove"	,
+						"touchstart" 		: "pointerdown"	,
+						"touchend"	 		: "pointerup"		,
+						"tap"		 		: "pointertap"		,
+						"mousewheel" 		: "mousewheel"		,
+						"DOMMouseScroll" 	: "mousewheel"
 					};
 				} 
 
@@ -1143,6 +1151,8 @@ define(function(){
 		},
 		_onUserEvent : {
 			value : function(evt){
+				evt.preventDefault();
+
 				var eventType = this.events[evt.type];
 
 				var bounds = this.interactionElement.getBoundingClientRect();
