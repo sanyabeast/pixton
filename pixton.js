@@ -1108,7 +1108,7 @@ define(function(){
 						"mousedown"	 		: "pointerdown" 	,
 						"mouseup"	 		: "pointerup" 		,
 						"click" 	 		: "pointertap" 		,
-						"touchmove"	 		: "pointermove"		s,
+						"touchmove"	 		: "pointermove"		,
 						"touchstart" 		: "pointerdown"		,
 						"touchend"	 		: "pointerup"		,
 						"tap"		 		: "pointertap"		,
