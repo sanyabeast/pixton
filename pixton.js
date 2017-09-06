@@ -398,7 +398,7 @@ define(function(){
 				this.eventData.extra.wheelDeltaX = evt.wheelDeltaX || this.eventData.extra.wheelDeltaX;
 				this.eventData.extra.wheelDeltaY = evt.wheelDeltaY || this.eventData.extra.wheelDeltaY;
 				
-				if (eventType == "mousewheel"){
+				if (eventType == "mousewheel" && this.hovered){
 					result = this.runCallback("mousewheel");
 				}
 

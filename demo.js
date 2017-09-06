@@ -42,6 +42,7 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 
 		sprite2.classes.add("sprite");
 		sprite2.classes.add("kek");
+		sprite2.classes.add("sprite2");
 
 		sprite2.scale.set(0.35);
 
@@ -74,17 +75,32 @@ define(["pixton", "tweener", "unicycle"], function(Pixton, tweener, Unicycle){
 			graphics2.y += evt.extra.deltaY;
 		});	
 
-		container.interactive = true;
-		container.callbacks.add("pointerdrag", function(evt){
-			console.log("CONTAINER");
-			container.x += evt.extra.deltaX;
-			container.y += evt.extra.deltaY;
-		});
+		// container.interactive = true;
+		// container.callbacks.add("pointerdrag", function(evt){
+		// 	container.x += evt.extra.deltaX;
+		// 	container.y += evt.extra.deltaY;
+		// });
 
 		graphics2.x = 150;
 		graphics2.y = 150;
 
 		window.graphics2 = graphics2;
+
+		sprite2.interactive = true;
+
+		sprite2.callbacks.add("pointerover", function(){
+			console.log("hovered");
+		});
+
+		sprite2.callbacks.add("mousewheel", function(evt){
+			var currentScale = sprite2.scale.x;
+
+			if (evt.extra.wheelDeltaY > 0){
+				sprite2.scale.set(currentScale * 0.75, currentScale * 0.75);
+			} else {
+				sprite2.scale.set(currentScale * 1.25, currentScale * 1.25);
+			}
+		});
 
 	};
 
