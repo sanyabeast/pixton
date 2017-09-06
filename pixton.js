@@ -1104,12 +1104,12 @@ define(function(){
 					this._events = {
 						"mousemove"	 		: "pointermove" 	,
 						"mouseover"	 		: "pointerover" 	,
-						"mouseout"	 		: "pointerout" 	,
+						"mouseout"	 		: "pointerout" 		,
 						"mousedown"	 		: "pointerdown" 	,
 						"mouseup"	 		: "pointerup" 		,
-						"click" 	 		: "pointertap" 	,
-						"touchmove"	 		: "pointermove"	,
-						"touchstart" 		: "pointerdown"	,
+						"click" 	 		: "pointertap" 		,
+						"touchmove"	 		: "pointermove"		s,
+						"touchstart" 		: "pointerdown"		,
 						"touchend"	 		: "pointerup"		,
 						"tap"		 		: "pointertap"		,
 						"mousewheel" 		: "mousewheel"		,
@@ -1141,10 +1141,6 @@ define(function(){
 				}
 
 				element.testEvent = new Event("mousemove");
-				// element.customEventCheckingID = setInterval(function(){
-				// 	element.dispatchEvent(element.testEvent);
-				// }, this.options.interactionFreq || 250);
-
 				this.interactionElement = element;
 
 			}
@@ -1160,7 +1156,7 @@ define(function(){
 				var x = evt.pageX - bounds.left;
 				var y = evt.pageY - bounds.top;
 
-				if (eventType == "pointermove"){
+				if (eventType == "pointermove" || eventType == "mousewheel"){
 
 					if (+new Date() - this.prevPointerEventTime < (this.interactionFreq || 10)){
 						return;
