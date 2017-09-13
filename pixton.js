@@ -940,7 +940,7 @@ define(function(){
 							context.rect((dx + current.x) * dsx, (dy + current.y) * dsy, current.w * dsx, current.h * dsy);
 							context.fillStyle = current.fillColor;
 							context.globalAlpha = current.fillAlpha || 1;
-							context.fillRect(dx + current.x, dy + current.y, current.w, current.h);
+							context.fillRect((dx + current.x) * dsx, (dy + current.y) * dsy, current.w * dsx, current.h * dsy);
 
 							if (current.lineWidth){
 								context.lineWidth = current.lineWidth || 0;
@@ -958,7 +958,7 @@ define(function(){
 						case "circle":
 						  	context.save();
 							context.beginPath();
-							context.translate((dx + current.x), (dy + current.y));
+							context.translate((dx + current.x) * dsx, (dy + current.y) * dsy);
 							context.scale(dsx, dsy);
 							context.arc(0, 0, current.radius, 0, 2 * Math.PI, false);
 							context.restore();
@@ -1149,8 +1149,9 @@ define(function(){
 			value : function(evt){
 				evt.preventDefault();
 
-				var eventType = this.events[evt.type];
 
+				var eventType = this.events[evt.type];
+				
 				var bounds = this.interactionElement.getBoundingClientRect();
 
 				var x = evt.pageX - bounds.left;
@@ -1167,8 +1168,8 @@ define(function(){
 					this.interactionElement.testEvent = evt
 				};
 
-				x = tools.transCoord(x, this.interactionElement.clientWidth, this.canvas.width);
-				y = tools.transCoord(y, this.interactionElement.clientHeight, this.canvas.height);
+				x = tools.transCoord(x, this.interactionElement.clientWidth, this.canvas.width) / this.scale.x;
+				y = tools.transCoord(y, this.interactionElement.clientHeight, this.canvas.height) / this.scale.y;
 
 				if (this.interactive) this.processInteractivity(eventType, x, y, this.canvas, evt, this.calculated.position.x, this.calculated.position.y);
 
@@ -1187,27 +1188,28 @@ define(function(){
 		},
 		resize : {
 			value : function(w, h){
-				this.size.x = w * this.resolution;
-				this.size.y = h * this.resolution;
-				this.canvas.width = this.xCanvas.width = w * this.resolution;
-				this.canvas.height = this.xCanvas.height = h * this.resolution;
+				var  resolution = window.devicePixelRatio || 1;
+				this.scale.set(resolution);
+				this.size.x = w;
+				this.size.y = h;
+				this.canvas.width = this.xCanvas.width = w * resolution;
+				this.canvas.height = this.xCanvas.height = h * resolution;
 			}
 		},
 		resizeToFitParent : {
 			value : function(){
 				var parent = this.canvas.parentNode;
-				var resolution = window.devicePixelRatio;
 
 				if (parent){
-					this.resize(parent.clientWidth * resolution, parent.clientHeight * resolution);
+					this.resize(parent.clientWidth, parent.clientHeight);
 				}
 
 			}
 		},
 		render : {
 			value : function(){
-				this.xCtx.clearRect(0, 0, this.size.x, this.size.y);
-				this.ctx.clearRect(0, 0, this.size.x, this.size.y);
+				this.xCtx.clearRect(0, 0, this.xCanvas.width, this.xCanvas.height);
+				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 				this.prerender(this.ctx);
 				this.ctx.drawImage(this.xCanvas, 0, 0);
 			}
