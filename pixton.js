@@ -551,9 +551,23 @@ define(function(){
 				return this;
 			},
 		},
+		remove : {
+			value : function(){
+				if (this.parent){
+					this.parent.removeChild(this);
+				}
+
+				return this;
+			}
+		},
 		removeChild : {
 			value : function(child){
 				this.children.removeByIndex(child.childIndex);
+				this.children.iterate(function(child, index){
+					child.childIndex = index;
+				});
+
+				return this;
 			}
 		},
 		matchClassSelector : {
