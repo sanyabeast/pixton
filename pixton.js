@@ -1051,7 +1051,7 @@ define(function(){
 				context.font = this.styles.fontSize + " " + this.styles.fontFamily;
 				context.fillStyle = this.styles.color;
 				context.textAlign = this.styles.textAlign;
-				context.fillText(this.text, dx, dy);
+				context.fillText(this.text, dx * dsx, dy * dsy);
 			}
 		}
 	});
