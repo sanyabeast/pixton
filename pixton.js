@@ -72,7 +72,10 @@ define(function(){
 		},
 		calcOffsetY : function(){
 			
-		}
+		},
+		distancePoints2 : function(x0, y0, x1, y1){
+			return Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
+		},
 	};
 
 
@@ -266,6 +269,7 @@ define(function(){
 			options = options || {};
 			this.children = new TokensCollection();
 			this.position = new Point();
+			this.pointerPosition = new Point(0, 0),
 			this.scale = new Point(1, 1);
 			this.size = new Point(1, 1);
 			this.anchor = new Point(0, 0);
@@ -290,7 +294,10 @@ define(function(){
 					deltaX : 0,
 					deltaY : 0,
 					prevX : 0,
-					prevY : 0
+					prevY : 0,
+					panningStarted : false,
+					prevPanningDistance : 1,
+					panningDelta : 1
 				},
 				type : null,
 				target : this
@@ -395,6 +402,9 @@ define(function(){
 				this.eventData.extra.prevX = x;
 				this.eventData.extra.prevY = y;
 
+
+				console.log("original pointer",this.eventData.pointer.x, this.eventData.pointer.y);
+
 				this.eventData.extra.wheelDeltaX = evt.wheelDeltaX || this.eventData.extra.wheelDeltaX;
 				this.eventData.extra.wheelDeltaY = evt.wheelDeltaY || this.eventData.extra.wheelDeltaY;
 				
@@ -407,6 +417,11 @@ define(function(){
 						this.hovered = false;
 						result = this.runCallback("pointerout");
 					}
+				}
+
+				if (eventType == "pointerdown" && evt.isTouchEvent && inside){
+					this.hovered = true;
+					result = this.runCallback("pointerover");
 				}
 
 				if (eventType == "pointermove" && inside && !this.hovered){
@@ -437,6 +452,7 @@ define(function(){
 
 				if (eventType == "pointerup" && inside){
 					this.captured = false;
+					this.eventData.extra.panningStarted = false;
 					result = this.runCallback("pointerup");
 				}
 
@@ -457,6 +473,30 @@ define(function(){
 
 				if (eventType == "pointermove" && this.captured){
 					result = this.runCallback("pointerdrag");
+				}
+
+				if (eventType == "panning"){
+
+					if (this.eventData.extra.panningStarted){
+						var distance = tools.distancePoints2(evt.touch1X, evt.touch1Y, evt.touch2X, evt.touch2Y);
+						this.eventData.extra.panningDelta = this.eventData.extra.prevPanningDistance / distance;
+						this.eventData.extra.prevPanningDistance = distance;
+					} else {
+						this.eventData.extra.panningStarted = true;
+						this.eventData.extra.prevPanningDistance = tools.distancePoints2(evt.touch1X, evt.touch1Y, evt.touch2X, evt.touch2Y);
+						this.eventData.extra.panningDelta = 1;
+					}
+
+					//console.log(this.eventData.extra.panningDelta);
+
+
+					this.eventData.pointer.x = x;
+					this.eventData.pointer.y = y;
+
+					console.log("panning pointer",this.eventData.pointer.x, this.eventData.pointer.y);
+					//console.log(this.eventData.pointer);
+
+					result = this.runCallback("panning");
 				}
 
 				return result;
@@ -1163,15 +1203,68 @@ define(function(){
 			value : function(evt){
 				evt.preventDefault();
 
-
+				var isTouchEvent = (evt instanceof TouchEvent);
+				var touchCount = 0;
 				var eventType = this.events[evt.type];
-				
 				var bounds = this.interactionElement.getBoundingClientRect();
+				var x, y;
 
-				var x = evt.pageX - bounds.left;
-				var y = evt.pageY - bounds.top;
+				evt.isTouchEvent = isTouchEvent;
 
-				if (eventType == "pointermove" || eventType == "mousewheel"){
+				if (isTouchEvent){
+					touchCount = evt.touches.length;
+					evt.touchCount = touchCount;
+
+					if (touchCount == 1){
+						x = tools.transCoord((evt.touches[0].pageX - bounds.left), this.interactionElement.clientWidth, this.canvas.width) / this.scale.x;
+						y = tools.transCoord((evt.touches[0].pageY - bounds.top), this.interactionElement.clientHeight, this.canvas.height) / this.scale.y;
+					} else if (touchCount == 2){
+
+						evt.touch1X = tools.transCoord((evt.touches[0].pageX - bounds.left), this.interactionElement.clientWidth, this.canvas.width) / this.scale.x;
+						evt.touch1Y = tools.transCoord((evt.touches[0].pageY - bounds.top), this.interactionElement.clientHeight, this.canvas.height) / this.scale.y;
+
+						evt.touch2X = tools.transCoord((evt.touches[1].pageX - bounds.left), this.interactionElement.clientWidth, this.canvas.width) / this.scale.x;
+						evt.touch2Y = tools.transCoord((evt.touches[1].pageY - bounds.top), this.interactionElement.clientHeight, this.canvas.height) / this.scale.y;
+
+						x = (evt.touch1X + evt.touch2X) / 2;
+						y = (evt.touch1Y + evt.touch2Y) / 2;
+
+						eventType = "panning";
+					}
+
+					if (touchCount > 0){
+						
+
+						if (touchCount == 2){
+							
+						}
+
+					} else {
+						x = this.pointerPosition.x;
+						y = this.pointerPosition.y;
+					}
+
+					if (eventType == "pointerdown"){
+						this.prevPointerDownTime = +new Date();
+					}
+
+					if (eventType == "pointerup"){
+						console.log(new Date() - this.prevPointerDownTime)
+						if (+new Date() - this.prevPointerDownTime < 250){
+							eventType = "pointertap";
+						}
+					}
+
+				} else {
+					x = tools.transCoord((evt.pageX - bounds.left), this.interactionElement.clientWidth, this.canvas.width) / this.scale.x;
+					y = tools.transCoord((evt.pageY - bounds.top), this.interactionElement.clientHeight, this.canvas.height) / this.scale.y;
+				}
+
+				this.pointerPosition.x = x;
+				this.pointerPosition.y = y;
+
+
+				if (eventType == "pointermove" || eventType == "mousewheel" || eventType == "panning"){
 
 					if (+new Date() - this.prevPointerEventTime < (this.interactionFreq || 10)){
 						return;
@@ -1181,9 +1274,6 @@ define(function(){
 
 					this.interactionElement.testEvent = evt
 				};
-
-				x = tools.transCoord(x, this.interactionElement.clientWidth, this.canvas.width) / this.scale.x;
-				y = tools.transCoord(y, this.interactionElement.clientHeight, this.canvas.height) / this.scale.y;
 
 				if (this.interactive) this.processInteractivity(eventType, x, y, this.canvas, evt, this.calculated.position.x, this.calculated.position.y);
 
@@ -1196,13 +1286,13 @@ define(function(){
 				if (typeof this._resolution == "undefined") this._resolution = window.devicePixelRatio || 1;
 				return this._resolution;
 			},
-			set : function(){
+			set : function(value){
 				this._resolution = value;
 			}
 		},
 		resize : {
 			value : function(w, h){
-				var  resolution = window.devicePixelRatio || 1;
+				var  resolution = this.resolution || window.devicePixelRatio || 1;
 				this.scale.set(resolution);
 				this.size.x = w;
 				this.size.y = h;
@@ -1224,7 +1314,7 @@ define(function(){
 			value : function(){
 				this.xCtx.clearRect(0, 0, this.xCanvas.width, this.xCanvas.height);
 				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-				this.prerender(this.ctx);
+				this.prerender(this.xCtx);
 				this.ctx.drawImage(this.xCanvas, 0, 0);
 			}
 		},
