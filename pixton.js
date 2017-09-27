@@ -403,7 +403,7 @@ define(function(){
 				this.eventData.extra.prevY = y;
 
 
-				console.log("original pointer",this.eventData.pointer.x, this.eventData.pointer.y);
+				// console.log("original pointer",this.eventData.pointer.x, this.eventData.pointer.y);
 
 				this.eventData.extra.wheelDeltaX = evt.wheelDeltaX || this.eventData.extra.wheelDeltaX;
 				this.eventData.extra.wheelDeltaY = evt.wheelDeltaY || this.eventData.extra.wheelDeltaY;
@@ -417,6 +417,12 @@ define(function(){
 						this.hovered = false;
 						result = this.runCallback("pointerout");
 					}
+				}
+
+				if (eventType == "pointerup" && evt.isTouchEvent && this.hovered){
+					this.hovered = false;
+					this.captured = false;
+					result = this.runCallback("pointerout");
 				}
 
 				if (eventType == "pointerdown" && evt.isTouchEvent && inside){
@@ -487,14 +493,9 @@ define(function(){
 						this.eventData.extra.panningDelta = 1;
 					}
 
-					//console.log(this.eventData.extra.panningDelta);
-
 
 					this.eventData.pointer.x = x;
 					this.eventData.pointer.y = y;
-
-					console.log("panning pointer",this.eventData.pointer.x, this.eventData.pointer.y);
-					//console.log(this.eventData.pointer);
 
 					result = this.runCallback("panning");
 				}
@@ -1201,7 +1202,7 @@ define(function(){
 		},
 		_onUserEvent : {
 			value : function(evt){
-				evt.preventDefault();
+				//evt.preventDefault();
 
 				var isTouchEvent = (evt instanceof TouchEvent);
 				var touchCount = 0;
@@ -1249,7 +1250,6 @@ define(function(){
 					}
 
 					if (eventType == "pointerup"){
-						console.log(new Date() - this.prevPointerDownTime)
 						if (+new Date() - this.prevPointerDownTime < 250){
 							eventType = "pointertap";
 						}
