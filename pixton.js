@@ -1,5 +1,6 @@
 "use strict";
 define(function(){
+	var IS_TOUCH_DEVICE = !!(('ontouchstart' in window) || window.DocumentTouch && document instanceof DocumentTouch);
 	/*TOOlS*/
 	var Tools = function(){};
 	Tools.prototype = {
@@ -1202,13 +1203,25 @@ define(function(){
 		},
 		_onUserEvent : {
 			value : function(evt){
-				//evt.preventDefault();
+				// console.log(evt);
+				// evt.preventDefault();
 
 				var isTouchEvent = (evt instanceof TouchEvent);
+
+				if (IS_TOUCH_DEVICE && !isTouchEvent){
+					return;
+				}
+
 				var touchCount = 0;
 				var eventType = this.events[evt.type];
 				var bounds = this.interactionElement.getBoundingClientRect();
 				var x, y;
+
+
+				// if (eventType != "pointerdown"){
+				// 	// console.log(eventType);
+				// 	evt.preventDefault();
+				// }
 
 				evt.isTouchEvent = isTouchEvent;
 
