@@ -1206,7 +1206,7 @@ define(function(){
 				// console.log(evt);
 				// evt.preventDefault();
 
-				var isTouchEvent = (evt instanceof TouchEvent);
+				var isTouchEvent = ("TouchEvent" in window && evt instanceof TouchEvent);
 
 				if (IS_TOUCH_DEVICE && !isTouchEvent){
 					return;
@@ -1276,6 +1276,10 @@ define(function(){
 				this.pointerPosition.x = x;
 				this.pointerPosition.y = y;
 
+				if (eventType == "mousewheel"){
+					evt.preventDefault();
+				}
+
 
 				if (eventType == "pointermove" || eventType == "mousewheel" || eventType == "panning"){
 
@@ -1328,7 +1332,8 @@ define(function(){
 				this.xCtx.clearRect(0, 0, this.xCanvas.width, this.xCanvas.height);
 				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 				this.prerender(this.xCtx);
-				this.ctx.drawImage(this.xCanvas, 0, 0);
+				// console.log(this.xCanvas.width, this.xCanvas.height);
+				if (this.xCanvas.width) this.ctx.drawImage(this.xCanvas, 0, 0);
 			}
 		},
 		prerender : {
