@@ -420,7 +420,7 @@ define(function(){
 					}
 				}
 
-				if (eventType == "pointerup" && evt.isTouchEvent && this.hovered){
+				if (eventType == "pointerup" && evt.isTouchEvent){
 					this.hovered = false;
 					this.captured = false;
 					result = this.runCallback("pointerout");
@@ -1313,8 +1313,10 @@ define(function(){
 				this.scale.set(resolution);
 				this.size.x = w;
 				this.size.y = h;
-				this.canvas.width = this.xCanvas.width = w * resolution;
-				this.canvas.height = this.xCanvas.height = h * resolution;
+				this.canvas.width =  w * resolution;
+				this.canvas.height = h * resolution;
+				this.xCanvas.width = w * resolution;
+				this.xCanvas.height = h * resolution;
 			}
 		},
 		resizeToFitParent : {
@@ -1331,9 +1333,9 @@ define(function(){
 			value : function(){
 				this.xCtx.clearRect(0, 0, this.xCanvas.width, this.xCanvas.height);
 				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-				this.prerender(this.xCtx);
+				this.prerender(this.ctx);
 				// console.log(this.xCanvas.width, this.xCanvas.height);
-				if (this.xCanvas.width) this.ctx.drawImage(this.xCanvas, 0, 0);
+				//this.ctx.drawImage(this.xCanvas, 0, 0);
 			}
 		},
 		prerender : {
