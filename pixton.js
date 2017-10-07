@@ -1,9 +1,22 @@
 "use strict";
 define(function(){
 	var IS_TOUCH_DEVICE = !!(('ontouchstart' in window) || window.DocumentTouch && document instanceof DocumentTouch);
+
+
+	var Pixton;
+
 	/*TOOlS*/
 	var Tools = function(){};
 	Tools.prototype = {
+		superTrimString : function(input){
+			input = input.replace(/\s\s+/g, " ");
+			input = input.replace(/(\r\n|\n|\r)/gm,"");
+			input = input.trim();
+			return input;
+		},
+		numberize : function(data){
+			return Number(data) || 0;
+		},
 		genID : function(prefix){
 			return (prefix ? prefix + "-" : "") + Math.random().toString(32).substring(3, 10); 
 		},
@@ -33,7 +46,8 @@ define(function(){
 			}
 
 		},
-		inheritCLASS : function(SuperC, prototype){
+		inheritCLASS : function(SuperC, prototype, name){
+			var _super;
 			var C = prototype.constructor;
 			delete prototype.constructor;
 
@@ -44,11 +58,40 @@ define(function(){
 
 			Object.defineProperties(CLASS.prototype, SuperC.prototype._prototype);
 			Object.defineProperties(CLASS.prototype, prototype);
+
+			for (var k in prototype){
+				if (prototype[k].static){
+					CLASS[k] = CLASS.prototype[k];
+				}
+			}
+
+			name = name || "inherited class";
+
+			Object.defineProperty(CLASS.prototype, "CLASS_NAME", {
+				writable : false,
+				configurable : false,
+				value : name + " extends " + SuperC.CLASS_NAME
+			});
+
+			Object.defineProperty(CLASS, "CLASS_NAME", {
+				writable : false,
+				configurable : false,
+				value : name + " extends " + SuperC.CLASS_NAME
+			});
+
+			Object.defineProperty(CLASS.prototype, "super", {
+				writable : false,
+				configurable : false,
+				value : function(name){
+					return SuperC.prototype[name].apply(this, Array.prototype.splice.call(arguments, 1, arguments.length));
+				}
+			});
+			
 			CLASS.prototype._prototype = prototype;
 
 			return CLASS;
 		},
-		CLASS : function(prototype){
+		CLASS : function(prototype, name){
 			var C = prototype.constructor;
 			delete prototype.constructor;
 
@@ -58,6 +101,29 @@ define(function(){
 
 
 			Object.defineProperties(CLASS.prototype, prototype);
+
+			for (var k in prototype){
+				if (prototype[k].static){
+					CLASS[k] = CLASS.prototype[k];
+				}
+			}
+
+			name = name || "class";
+
+			Object.defineProperty(CLASS.prototype, "CLASS_NAME", {
+				writable : false,
+				configurable : false,
+				value : name
+			});
+
+			Object.defineProperty(CLASS, "CLASS_NAME", {
+				writable : false,
+				configurable : false,
+				value : name
+			});
+
+			
+
 			CLASS.prototype._prototype = prototype;
 
 			return CLASS;
@@ -79,8 +145,151 @@ define(function(){
 		},
 	};
 
-
 	var tools = new Tools;
+
+	/*scene builder*/
+	var SceneBuilder = tools.CLASS({
+		constructor : function(){
+
+		},
+
+		make : {
+			value : function(data){
+				var description = this.convert2Obj(data);
+				var scene = this.buildScene(description);
+				return scene;
+			}
+		},
+
+		buildScene : {
+			value : function(description){
+
+				var result = iterate(description);
+
+				function iterate(description){
+					var node;
+
+					switch(description.type.toLowerCase()){
+						case "sprite":
+							node = new Pixton.Sprite();
+						break;
+						case "graphics":
+							node = new Pixton.Graphics();
+						break;
+						case "text":
+							node = new Pixton.Text();
+						break;
+						default:
+							node = new Pixton.Node();
+						break;
+					}
+
+					node.setup(description);
+
+					for (var a = 0; a < description.children.length; a++){
+						node.addChild(iterate(description.children[a]));
+					}
+
+
+					return node;
+
+				}
+
+				return result;
+			}
+		},
+
+		convert2Obj : {
+			value : function(data){
+				var type = this.typeof(data);
+
+
+				switch(type){
+					case "html":
+						return this.DOM2OBJ(this.HTML2DOM(data));
+					break;
+					case "dom":
+						return this.DOM2OBJ(data);
+					break;
+					case "tpl":
+						return this.DOM2OBJ(data.content.cloneNode(true).children[0]);
+					break;
+					case "json":
+						return JSON.parse(data);
+					break;
+					case "obj":
+						return data;
+					break;
+				}
+
+			}
+		},
+
+		typeof : {
+			value : function(data){
+				if (typeof data == "string"){
+					if (data.indexOf("<") == 0 && data.indexOf(">") == data.length - 1){
+						return "html";
+					} else {
+						return "json";
+					}
+				} else if (typeof data == "object"){
+					if (data instanceof window.Node){
+						if (data.tagName == "TEMPLATE"){
+							return "tpl";
+						} else {
+							return "dom";							
+						}
+					} else {
+						return "obj";
+					}
+				}
+			}
+		},
+
+		HTML2DOM : {
+			value : function(html){
+				var el = document.createElement("div");
+				el.innerHTML = html;
+				var result = el.children[0];
+				el.remove();
+				return result;
+			}
+		},
+
+		DOM2OBJ : {
+			value : function(dom){
+				var result = iterate(dom);
+
+				function iterate(node){
+					var description = {};
+
+					for (var a = 0; a < node.attributes.length; a++){
+						console.log(node.attributes[a].name);
+						description[node.attributes[a].name] = node.attributes[a].value;
+					}
+
+					if(node.childNodes[0]) description.value = tools.superTrimString(node.childNodes[0].nodeValue);
+					description.type = node.tagName;
+					description.children = [];
+
+					for (var a = 0; a < node.children.length; a++){
+						description.children.push(iterate(node.children[a]));
+					}
+
+					return description;
+
+				}
+
+				return result;
+
+			}
+		}
+
+
+
+	}, "SceneBuilder");
+
 
 	/*Tokelist*/
 	var TokensCollection = tools.CLASS({
@@ -181,7 +390,7 @@ define(function(){
 			writable : true,
 			configurable : true
 		}
-	});
+	}, "TokensCollection");
 
 	var TokensList = tools.inheritCLASS(TokensCollection, {
 		content : {
@@ -234,7 +443,7 @@ define(function(){
 				}, this)
 			}
 		}
-	});
+	}, "TokensList");
 
 	/*POINT*/
 	var Point = tools.CLASS({
@@ -260,7 +469,7 @@ define(function(){
 				this.y = y;
 			}
 		}
-	});
+	}, "Point");
 
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -304,6 +513,22 @@ define(function(){
 				target : this
 			};
 
+		},
+		setup : {
+			value : function(data){
+				console.log(data);
+
+				if (data.x) this.position.x = tools.numberize(data.x);
+				if (data.y) this.position.y = tools.numberize(data.y);
+				if (data.scale) this.position.scale.set(tools.numberize(data.scale) || 1);
+				if (data.scaleX) this.position.scale.x = tools.numberize(data.scaleX) || 1;
+				if (data.scaleY) this.position.scale.y = tools.numberize(data.scaleY) || 1;
+				if (data.id) this.id = data.id;
+				if (data.class) this.classes.content = data.class.split(" ");
+				if (data.invisible) this.visible = false;
+
+			},
+			writable : true
 		},
 		childIndex : {
 			get : function(){
@@ -693,7 +918,7 @@ define(function(){
 
 			}
 		}
-	});
+	}, "Node");
 
 	/*SPRITE*/
 	var Texture = tools.CLASS({
@@ -725,16 +950,35 @@ define(function(){
 				this._loaded = true;
 			}
 		}
-	});
+	}, "Texture");
 
 	var Sprite = tools.inheritCLASS(Node, {
 		constructor : function(texture){
-			if (texture instanceof Texture){
-				this.texture = texture;
-			} else if (typeof texture == "string"){
-				this.texture = new Texture(texture);
-			}		
+			if (texture) this.texture = texture;	
+		},
+		texture : {
+			get : function(){
+				return this._texture;
+			},
+			set : function(texture){
+				if (texture instanceof Texture){
+					this._texture = texture;
+				} else if (typeof texture == "string"){
+					this._texture = new Texture(texture);
+				}	
+			}
+		},
+		setup : {
+			value : function(data){
+				this.super("setup", data);
 
+				if (data.texture) {
+					console.log(data.texture);
+					this.texture = data.texture;
+				}
+
+			},
+			writable : true
 		},
 		type : {
 			get : function(){
@@ -767,7 +1011,7 @@ define(function(){
 
 			}
 		}
-	});
+	}, "Sprite");
 
 	var Graphics = tools.inheritCLASS(Node, {
 		constructor : function(){
@@ -1060,12 +1304,34 @@ define(function(){
 
 			}
 		}
-	});
+	}, "Graphics");
 
 	var Text = tools.inheritCLASS(Node, {
 		constructor : function(text, styles){
 			this._text = text;
 			this.styles = styles;
+
+			this.classes.add("text-node");
+
+		},
+		setup : {
+			value :function(data){
+				this.super("setup", data);
+
+				var styles = {};
+
+				if (data.fontsize) styles.fontSize = data.fontsize;
+				if (data.fontfamily) styles.fontFamily = data.fontfamily;
+				if (data.color) styles.color = data.color;
+				if (data.textalign) styles.textAlign = data.textalign;
+
+				if (data.value) this.text = data.value;
+
+				console.log(data, styles, this);
+
+				this.styles = styles;
+
+			}
 		},
 		type : {
 			get : function(){
@@ -1110,12 +1376,11 @@ define(function(){
 				context.fillText(this.text, dx * dsx, dy * dsy);
 			}
 		}
-	});
-
+	}, "Text");
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	/*PIXTON*/
-	var Pixton = tools.inheritCLASS(Node, {
+	Pixton = tools.inheritCLASS(Node, {
 		constructor : function(options){
 			this.options = options = (options || {});
 			this.canvas = options.canvas || document.createElement("canvas");
@@ -1129,6 +1394,10 @@ define(function(){
 			this._onUserEvent = this._onUserEvent.bind(this);
 			this.setupInteractivity();
 
+		},
+		sceneBuilder : {
+			value : new SceneBuilder(),
+			static : true
 		},
 		Texture : {
 			value : Texture
@@ -1203,9 +1472,6 @@ define(function(){
 		},
 		_onUserEvent : {
 			value : function(evt){
-				// console.log(evt);
-				// evt.preventDefault();
-
 				var isTouchEvent = ("TouchEvent" in window && evt instanceof TouchEvent);
 
 				if (IS_TOUCH_DEVICE && !isTouchEvent){
@@ -1217,11 +1483,6 @@ define(function(){
 				var bounds = this.interactionElement.getBoundingClientRect();
 				var x, y;
 
-
-				// if (eventType != "pointerdown"){
-				// 	// console.log(eventType);
-				// 	evt.preventDefault();
-				// }
 
 				evt.isTouchEvent = isTouchEvent;
 
@@ -1345,7 +1606,7 @@ define(function(){
 				}, this);
 			}
 		}
-	});
+	}, "Pixton");
 
 	Pixton.tools = new Tools;
 	Pixton.Node = Pixton.Container = Node;
