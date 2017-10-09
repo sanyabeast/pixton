@@ -6,6 +6,11 @@ define(function(){
 	var Pixton;
 
 	/*TOOlS*/
+	var multiDispatchedEvents = {
+		"pointerout" : true,
+		"pointerup" : true
+	};
+
 	var Tools = function(){};
 	Tools.prototype = {
 		superTrimString : function(input){
@@ -591,6 +596,9 @@ define(function(){
 				dx += this.calculated.position.x;
 				dy += this.calculated.position.y;
 
+				if (multiDispatchedEvents[eventType]){
+					dispatched = false;
+				}
 
 				if (dispatched){
 					return;
@@ -1599,6 +1607,7 @@ define(function(){
 				//this.ctx.drawImage(this.xCanvas, 0, 0);
 			}
 		},
+		
 		prerender : {
 			value : function(context){
 				this.children.iterate(function(child, index){
