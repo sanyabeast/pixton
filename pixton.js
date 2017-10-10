@@ -1115,6 +1115,25 @@ define(function(){
 				return this;
 			},
 		},
+		drawArc : {
+			value : function(x, y, radius, startAngle, endAngle){
+				this.primitives.add({
+					type : "arc",
+					x : x,
+					y : y,
+					radius : radius,
+					startAngle : startAngle, 
+					endAngle : endAngle,
+					fillColor : this.fillColor,
+					fillAlpha : this.fillAlpha,
+					lineColor : this.lineColor,
+					lineAlpha : this.lineAlpha,
+					lineWidth : this.lineWidth
+				});
+
+				return this;
+			},
+		},
 		drawPolygon : {
 			value : function(path){
 				this.primitives.add({
@@ -1299,6 +1318,43 @@ define(function(){
 							}
 
 						break;
+						case "arc":
+						  	context.save();
+							context.beginPath();
+							context.translate((dx + current.x) * dsx, (dy + current.y) * dsy);
+							context.scale(dsx, dsy);
+
+							context.arc(0, 0, current.radius, current.startAngle, current.endAngle);
+							context.restore();
+							context.fillStyle = current.fillColor;
+							context.globalAlpha = current.fillAlpha || 1;
+							context.fill();
+
+							if (current.lineWidth){
+								context.lineWidth = current.lineWidth || 0;
+								context.globalAlpha = current.lineAlpha || 1;
+								context.strokeStyle = current.lineColor;
+								context.stroke();
+							}
+
+							
+
+							if ((current.x) + current.radius * 2 > sw) sw = (current.x) + (current.radius * 2);
+							if ((current.y) + current.radius * 2 > sh) sh = (current.y) + (current.radius * 2);
+
+							if (current.x < current.radius){
+								if (this.x + current.x - current.radius < this.calculated.position.x) {
+									this.calculated.position.x = this.x + (current.x - current.radius)
+								}
+							}
+
+							if (current.y < current.radius){
+								if (this.y + current.y - current.radius < this.calculated.position.y) {
+									this.calculated.position.y = this.y + (current.y - current.radius)
+								}
+							}
+
+						break;
 					}
 
 					this.size._x = sw;
@@ -1390,6 +1446,7 @@ define(function(){
 	/*PIXTON*/
 	Pixton = tools.inheritCLASS(Node, {
 		constructor : function(options){
+			this._fps = 0;
 			this.options = options = (options || {});
 			this.canvas = options.canvas || document.createElement("canvas");
 			this.canvas.classList.add("pixton");
@@ -1598,8 +1655,15 @@ define(function(){
 
 			}
 		},
+		fps : {
+			get : function(){
+				return this._fps;
+			},
+		},
 		render : {
-			value : function(){
+			value : function(absDelta, relDelta){
+				this._fps = (this._fps + 60 / relDelta) / 2; 
+
 				this.xCtx.clearRect(0, 0, this.xCanvas.width, this.xCanvas.height);
 				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 				this.prerender(this.ctx);
