@@ -2,7 +2,6 @@
 define(function(){
 	var IS_TOUCH_DEVICE = !!(('ontouchstart' in window) || window.DocumentTouch && document instanceof DocumentTouch);
 
-
 	var Pixton;
 
 	/*TOOlS*/
@@ -1324,6 +1323,7 @@ define(function(){
 							context.translate((dx + current.x) * dsx, (dy + current.y) * dsy);
 							context.scale(dsx, dsy);
 
+
 							context.arc(0, 0, current.radius, current.startAngle, current.endAngle);
 							context.restore();
 							context.fillStyle = current.fillColor;
@@ -1537,7 +1537,18 @@ define(function(){
 		},
 		_onUserEvent : {
 			value : function(evt){
+				if (evt.type == "mousemove"){
+					IS_TOUCH_DEVICE = false;
+				}
+
+
 				var isTouchEvent = ("TouchEvent" in window && evt instanceof TouchEvent);
+
+				if (isTouchEvent){
+					IS_TOUCH_DEVICE = true;
+				}
+
+				console.log(IS_TOUCH_DEVICE);
 
 				if (IS_TOUCH_DEVICE && !isTouchEvent){
 					return;
@@ -1650,7 +1661,7 @@ define(function(){
 				var parent = this.canvas.parentNode;
 
 				if (parent){
-					this.resize(parent.clientWidth, parent.clientHeight);
+					this.resize(parent.clientWidth || this.canvas.width || 1, parent.clientHeight || this.canvas.height || 1);
 				}
 
 			}
