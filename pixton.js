@@ -269,7 +269,6 @@ define(function(){
 					var description = {};
 
 					for (var a = 0; a < node.attributes.length; a++){
-						console.log(node.attributes[a].name);
 						description[node.attributes[a].name] = node.attributes[a].value;
 					}
 
@@ -520,8 +519,6 @@ define(function(){
 		},
 		setup : {
 			value : function(data){
-				console.log(data);
-
 				if (data.x) this.position.x = tools.numberize(data.x);
 				if (data.y) this.position.y = tools.numberize(data.y);
 				if (data.scale) this.position.scale.set(tools.numberize(data.scale) || 1);
@@ -980,7 +977,6 @@ define(function(){
 				this.super("setup", data);
 
 				if (data.texture) {
-					console.log(data.texture);
 					this.texture = data.texture;
 				}
 
@@ -1391,8 +1387,6 @@ define(function(){
 
 				if (data.value) this.text = data.value;
 
-				console.log(data, styles, this);
-
 				this.styles = styles;
 
 			}
@@ -1547,8 +1541,6 @@ define(function(){
 				if (isTouchEvent){
 					IS_TOUCH_DEVICE = true;
 				}
-
-				console.log(IS_TOUCH_DEVICE);
 
 				if (IS_TOUCH_DEVICE && !isTouchEvent){
 					return;
