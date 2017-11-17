@@ -1606,6 +1606,9 @@ define(function(){
 				this.pointerPosition.y = y;
 
 				if (eventType == "mousewheel"){
+					if (typeof evt.detail == "number"){
+						evt.wheelDeltaY = -1 * evt.detail;
+					}
 					evt.preventDefault();
 				}
 
