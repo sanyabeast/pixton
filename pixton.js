@@ -633,8 +633,6 @@ define(function(){
 				this.eventData.extra.prevY = y;
 
 
-				// console.log("original pointer",this.eventData.pointer.x, this.eventData.pointer.y);
-
 				this.eventData.extra.wheelDeltaX = evt.wheelDeltaX || this.eventData.extra.wheelDeltaX;
 				this.eventData.extra.wheelDeltaY = evt.wheelDeltaY || this.eventData.extra.wheelDeltaY;
 				
@@ -1521,6 +1519,7 @@ define(function(){
 				var events = this.events;
 				
 				for (var k in events){
+					window.element = element;
 					element.addEventListener(k, this._onUserEvent);
 				}
 
@@ -1551,7 +1550,6 @@ define(function(){
 				var bounds = this.interactionElement.getBoundingClientRect();
 				var x, y;
 
-
 				evt.isTouchEvent = isTouchEvent;
 
 				if (isTouchEvent){
@@ -1559,15 +1557,15 @@ define(function(){
 					evt.touchCount = touchCount;
 
 					if (touchCount == 1){
-						x = tools.transCoord((evt.touches[0].pageX - bounds.left), this.interactionElement.clientWidth, this.canvas.width) / this.scale.x;
-						y = tools.transCoord((evt.touches[0].pageY - bounds.top), this.interactionElement.clientHeight, this.canvas.height) / this.scale.y;
+						x = tools.transCoord((evt.touches[0].pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
+						y = tools.transCoord((evt.touches[0].pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
 					} else if (touchCount == 2){
 
-						evt.touch1X = tools.transCoord((evt.touches[0].pageX - bounds.left), this.interactionElement.clientWidth, this.canvas.width) / this.scale.x;
-						evt.touch1Y = tools.transCoord((evt.touches[0].pageY - bounds.top), this.interactionElement.clientHeight, this.canvas.height) / this.scale.y;
+						evt.touch1X = tools.transCoord((evt.touches[0].pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
+						evt.touch1Y = tools.transCoord((evt.touches[0].pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
 
-						evt.touch2X = tools.transCoord((evt.touches[1].pageX - bounds.left), this.interactionElement.clientWidth, this.canvas.width) / this.scale.x;
-						evt.touch2Y = tools.transCoord((evt.touches[1].pageY - bounds.top), this.interactionElement.clientHeight, this.canvas.height) / this.scale.y;
+						evt.touch2X = tools.transCoord((evt.touches[1].pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
+						evt.touch2Y = tools.transCoord((evt.touches[1].pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
 
 						x = (evt.touch1X + evt.touch2X) / 2;
 						y = (evt.touch1Y + evt.touch2Y) / 2;
@@ -1575,14 +1573,7 @@ define(function(){
 						eventType = "panning";
 					}
 
-					if (touchCount > 0){
-						
-
-						if (touchCount == 2){
-							
-						}
-
-					} else {
+					if (touchCount < 0){
 						x = this.pointerPosition.x;
 						y = this.pointerPosition.y;
 					}
@@ -1598,15 +1589,15 @@ define(function(){
 					}
 
 				} else {
-					x = tools.transCoord((evt.pageX - bounds.left), this.interactionElement.clientWidth, this.canvas.width) / this.scale.x;
-					y = tools.transCoord((evt.pageY - bounds.top), this.interactionElement.clientHeight, this.canvas.height) / this.scale.y;
+					x = tools.transCoord((evt.pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
+					y = tools.transCoord((evt.pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
 				}
 
 				this.pointerPosition.x = x;
 				this.pointerPosition.y = y;
 
 				if (eventType == "mousewheel"){
-					if (typeof evt.detail == "number"){
+					if (typeof evt.detail == "number" && typeof evt.wheelDeltaX == "undefined"){
 						evt.wheelDeltaY = -1 * evt.detail;
 					}
 					evt.preventDefault();
@@ -1673,7 +1664,6 @@ define(function(){
 				this.xCtx.clearRect(0, 0, this.xCanvas.width, this.xCanvas.height);
 				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 				this.prerender(this.ctx);
-				// console.log(this.xCanvas.width, this.xCanvas.height);
 				//this.ctx.drawImage(this.xCanvas, 0, 0);
 			}
 		},
