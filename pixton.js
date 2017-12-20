@@ -1028,6 +1028,15 @@ define(function(){
 
 			this.lineJoin = "round";
 			this.lineCap = "round";
+
+			this.shadowColor = "#000000";
+			this.shadowBlur = 0;
+			this.shadowOffsetX = 0;
+			this.shadowOffsetY = 0;
+		},
+		setShadow : {
+			writable : true,
+			configurable : true
 		},
 		type : {
 			get : function(){
@@ -1056,7 +1065,11 @@ define(function(){
 					lineWidth : this.lineWidth,
 					lineJoin  : this.lineJoin,
 					lineCap   : this.lineCap,
-					path : [x, y]
+					path : [x, y],
+					shadowColor : this.shadowColor,
+					shadowBlur : this.shadowBlur,
+					shadowOffsetX : this.shadowOffsetX,
+					shadowOffsetY : this.shadowOffsetY
 				});
 
 				return this;
@@ -1073,6 +1086,21 @@ define(function(){
 			writable : true,
 			configurable : true
 		},
+		shadowStyle : {
+			value : function(color, blur, offsetX, offsetY){
+				if (!color){
+					this.shadowBlur = 0;
+					return;
+				}
+
+				this.shadowColor = color || this.shadowColor || "#000000";
+				this.shadowBlur = blur || this.shadowBlur || 0;
+				this.shadowOffsetX = offsetX || 0;
+				this.shadowOffsetY = offsetY || 0;
+			},
+			writable : true,
+			configurable : true
+		},
 		drawRect : {
 			value : function(x, y, w, h){
 				this.primitives.add({
@@ -1085,7 +1113,11 @@ define(function(){
 					fillAlpha : this.fillAlpha,
 					lineColor : this.lineColor,
 					lineAlpha : this.lineAlpha,
-					lineWidth : this.lineWidth
+					lineWidth : this.lineWidth,
+					shadowColor : this.shadowColor,
+					shadowBlur : this.shadowBlur,
+					shadowOffsetX : this.shadowOffsetX,
+					shadowOffsetY : this.shadowOffsetY
 				});
 
 				return this;
@@ -1102,7 +1134,11 @@ define(function(){
 					fillAlpha : this.fillAlpha,
 					lineColor : this.lineColor,
 					lineAlpha : this.lineAlpha,
-					lineWidth : this.lineWidth
+					lineWidth : this.lineWidth,
+					shadowColor : this.shadowColor,
+					shadowBlur : this.shadowBlur,
+					shadowOffsetX : this.shadowOffsetX,
+					shadowOffsetY : this.shadowOffsetY
 				});
 
 				return this;
@@ -1136,7 +1172,12 @@ define(function(){
 					fillAlpha : this.fillAlpha,
 					lineColor : this.lineColor,
 					lineAlpha : this.lineAlpha,
-					lineWidth : this.lineWidth
+					lineWidth : this.lineWidth,
+					shadowColor : this.shadowColor,
+					shadowColor : this.shadowColor,
+					shadowBlur : this.shadowBlur,
+					shadowOffsetX : this.shadowOffsetX,
+					shadowOffsetY : this.shadowOffsetY
 				})
 			}
 		},
@@ -1193,6 +1234,12 @@ define(function(){
 				context.lineJoin = data.lineJoin;
 				context.lineCap = data.lineCap;
 				context.closePath();
+
+				context.shadowColor = data.shadowColor || "#000000";
+				context.shadowBlur = data.shadowBlur || 0;
+				context.shadowOffsetX = data.shadowOffsetX || 0;
+				context.shadowOffsetY = data.shadowOffsetY || 0;
+
 				context.stroke();
 
 				context.fillStyle = data.fillColor;
@@ -1223,6 +1270,10 @@ define(function(){
 				context.lineWidth = data.lineWidth;
 				context.lineJoin = data.lineJoin;
 				context.lineCap = data.lineCap;
+				context.shadowColor = data.shadowColor || "#000000";
+				context.shadowBlur = data.shadowBlur || 0;
+				context.shadowOffsetX = data.shadowOffsetX || 0;
+				context.shadowOffsetY = data.shadowOffsetY || 0;
 				context.stroke();
 
 				return this;
@@ -1246,6 +1297,12 @@ define(function(){
 				this.calculated.position.x = this.position.x;
 				this.calculated.position.y = this.position.y;
 
+				// context.shadowColor = "#000000";
+				// context.shadowBlur =  0;
+				// context.shadowOffsetX = 0;
+				// context.shadowOffsetY = 0;
+
+
 				this.primitives.iterate(function(current, index){
 					switch(current.type){
 						case "path":
@@ -1257,6 +1314,12 @@ define(function(){
 						case "rect":
 							context.beginPath();
 							context.globalAlpha = current.lineAlpha || 1;
+
+							context.shadowColor = current.shadowColor || "#000000";
+							context.shadowBlur = current.shadowBlur || 0;
+							context.shadowOffsetX = current.shadowOffsetX || 0;
+							context.shadowOffsetY = current.shadowOffsetY || 0;
+
 							context.rect((dx + current.x) * dsx, (dy + current.y) * dsy, current.w * dsx, current.h * dsy);
 							context.fillStyle = current.fillColor;
 							context.globalAlpha = current.fillAlpha || 1;
@@ -1276,6 +1339,11 @@ define(function(){
 
 						break;
 						case "circle":
+							context.shadowColor = current.shadowColor || "#000000";
+							context.shadowBlur = current.shadowBlur || 0;
+							context.shadowOffsetX = current.shadowOffsetX || 0;
+							context.shadowOffsetY = current.shadowOffsetY || 0;
+
 						  	context.save();
 							context.beginPath();
 							context.translate((dx + current.x) * dsx, (dy + current.y) * dsy);
@@ -1312,6 +1380,11 @@ define(function(){
 
 						break;
 						case "arc":
+							context.shadowColor = current.shadowColor || "#000000";
+							context.shadowBlur = current.shadowBlur || 0;
+							context.shadowOffsetX = current.shadowOffsetX || 0;
+							context.shadowOffsetY = current.shadowOffsetY || 0;
+
 						  	context.save();
 							context.beginPath();
 							context.translate((dx + current.x) * dsx, (dy + current.y) * dsy);
