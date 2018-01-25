@@ -1646,7 +1646,7 @@ define(function(){
 						eventType = "panning";
 					}
 
-					if (touchCount < 0){
+					if (touchCount <= 0){
 						x = this.pointerPosition.x;
 						y = this.pointerPosition.y;
 					}
@@ -1665,6 +1665,7 @@ define(function(){
 					x = tools.transCoord((evt.pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
 					y = tools.transCoord((evt.pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
 				}
+
 
 				this.pointerPosition.x = x;
 				this.pointerPosition.y = y;
