@@ -1520,6 +1520,8 @@ define(function(){
 			this.ctx = this.canvas.getContext("2d");
 			this.xCtx = this.xCanvas.getContext("2d");
 
+			this.ctx.imageSmoothingEnabled = this.xCtx.imageSmoothingEnabled = false;
+
 			this.render = this.render.bind(this);
 			this._onUserEvent = this._onUserEvent.bind(this);
 			this.setupInteractivity();
