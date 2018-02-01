@@ -1520,7 +1520,7 @@ define(function(){
 			this.ctx = this.canvas.getContext("2d");
 			this.xCtx = this.xCanvas.getContext("2d");
 
-			this.ctx.imageSmoothingEnabled = this.xCtx.imageSmoothingEnabled = false;
+			this.ctx.imageSmoothingQuality  = this.xCtx.imageSmoothingQuality  = "low";
 
 			this.render = this.render.bind(this);
 			this._onUserEvent = this._onUserEvent.bind(this);
@@ -1716,6 +1716,9 @@ define(function(){
 				this.canvas.height = h * resolution;
 				this.xCanvas.width = w * resolution;
 				this.xCanvas.height = h * resolution;
+
+				this.ctx.imageSmoothingEnabled = false;
+				this.xCtx.imageSmoothingEnabled = false;
 			}
 		},
 		resizeToFitParent : {
