@@ -5,8 +5,6 @@ define(function(){
 	var Pixton;
 	var instances = [];
 
-	console.log(1);
-
 	/*TOOlS*/
 	var multiDispatchedEvents = {
 		"pointerout" : true,
@@ -85,7 +83,7 @@ define(function(){
 
 			return prototype;
 		},
-		inheritCLASS : function(SuperC, prototype, name){
+		extendCLASS : function(SuperC, prototype, name){
 			prototype = this.normalizePrototype(prototype);
 
 			var _constructor = prototype.constructor;
@@ -108,10 +106,10 @@ define(function(){
 				}
 			}
 
-			name = name || "inherited from " + SuperC.name;
+			name = name || "inherited from " + SuperC.$name;
 
 			CLASS.__prototype = mergedPrototype;
-			CLASS.name = name;
+			CLASS.$name = name;
 
 			return CLASS;
 		},
@@ -138,7 +136,7 @@ define(function(){
 			name = name || "Anonymous";
 
 			CLASS.__prototype = prototype;
-			CLASS.name = name;
+			CLASS.$name = name;
 
 			return CLASS;
 		},
@@ -244,15 +242,99 @@ define(function(){
 		}
 	}, "Pixton_Gradient");
 
-	var DOMProxy = tools.CLASS({
+
+	/**DomProxy
+	  */
+
+	var DOMProxyNodeInterface = tools.CLASS((function(){
+		var prototype = {};
+		var props = [
+			"classList",
+			"attributes",
+			"setAttribute",
+			"getAttribute",
+			"removeAttribute"
+		];
+
+		for (var a = 0; a < props.length; a++){
+			let name = props[a];
+			prototype[name] = {
+				get : function(){
+					return this.dom[name];
+				}
+			};
+		}
+
+		return prototype;
+
+	}()), "Pixton_DOMProxyNodeInterface");
+
+	var DOMProxy = tools.extendCLASS(DOMProxyNodeInterface, {
 		constructor : function(){
 			this.dom = document.createElement(this.type);
-			console.log(this.dom);
 		},
 		sync : function(){
 			if (this.parent){
+				this.dom.pixtonNode = this;
 				this.parent.appendChild(this);
+				this.dom.setAttribute(":id", this.id);
+				this.dom.setAttribute(":type", this.type);
+				this.dom.setAttribute("x", this.x);
+				this.dom.setAttribute("y", this.y);
+				this.dom.setAttribute("scale-x", this.scale.x);
+				this.dom.setAttribute("scale-y", this.scale.y);
+				this.dom.setAttribute("visible", this.visible);
+				this.dom.setAttribute("interactive", this.interactive);
+				this.dom.setAttribute("button-mode", this.buttonMode);
 			}
+		},
+		$cache : {
+			get : function(){
+				this.__$cache = this.__$cache || {
+					selectors : {},
+				};
+				return this.__$cache;
+			}
+		},
+		select : function(selector, noCache, iteratee, context){
+			var result = null;
+			var temp;
+
+			if (typeof noCache == "function"){
+				context = iterate;
+				iterate = noCache;
+				noCache = false;
+			}
+
+			result = this.$cache.selectors[selector];
+
+			if (noCache === true || !result){
+				result = [];
+				temp = this.dom.querySelectorAll(selector);
+
+				for (var a = 0, l = temp.length; a < l; a++){
+					result[a] = temp[a].pixtonNode;
+				}
+
+				if (noCache !== true){
+					this.$cache.selectors[selector] = result;
+				}
+			}
+
+			if (typeof callback == "function"){
+				for (var a = 0, l = result.length; a < l; a++){
+					callback.call(context, result[a], a, result);
+				}
+			}
+
+			return result;
+
+		},
+		syncBranch : function(){
+			this.children.iterate(function(child){
+				child.sync();
+				child.syncBranch();
+			}, this);
 		},
 		appendChild : function(child){
 			this.dom.appendChild(child.dom);
@@ -334,7 +416,7 @@ define(function(){
 		}
 	}, "TokensCollection");
 
-	var TokensList = tools.inheritCLASS(TokensCollection, {
+	var TokensList = tools.extendCLASS(TokensCollection, {
 		content : {
 			get : function(){
 				return this._content;
@@ -404,7 +486,7 @@ define(function(){
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	/*NODE*/
-	var Node = tools.inheritCLASS(DOMProxy, {
+	var Node = tools.extendCLASS(DOMProxy, {
 		constructor : function(options){
 			options = options || {};
 			this.children = new TokensCollection();
@@ -416,7 +498,6 @@ define(function(){
 			this.classes = new TokensCollection(options.classes);
 			this.callbacks = new TokensList();
 			this.debug = new TokensList();
-			this.selectorsCache = new TokensList();
 			this.id = options.id;
 
 			this.calculated = {
@@ -730,7 +811,8 @@ define(function(){
 			this.children.add(child);
 			child.childIndex = this.children.content.size - 1;
 
-			// this.sync();
+			this.sync();
+			child.sync();
 
 			return this;
 		},
@@ -749,79 +831,6 @@ define(function(){
 
 			return this;
 		},
-		matchClassSelector : function(selector){
-			var classes = selector.split(".");
-			var matches = 0;
-			var targetMatchCount = classes.length;
-
-			for (var a = 0; a < classes.length; a++){
-				if (classes[a].length == 0){
-					targetMatchCount--;
-					continue;
-				}
-
-				if (this.classes.contains(classes[a])){
-					matches++;
-				} else {
-					matches--;
-					break;
-				}
-
-			}
-
-			return matches > 0 && (matches == targetMatchCount);
-
-		},
-		matchIdSelector : function(selector){
-			return this.id == selector.split("#")[1];
-		},
-		matchSelector : function(selector){
-			if (selector.indexOf("#") == 0){
-				return this.matchIdSelector(selector);
-			} else if (selector.indexOf(".") > -1){
-				return this.matchClassSelector(selector);
-			}
-
-		},
-		selectIteration : function(selector){
-			var result = [];
-
-			this.children.iterate(function(child){
-				if (child.matchSelector(selector)){
-					result.push(child);
-				};
-
-				result = tools.joinArray(result, child.selectIteration(selector));
-			});
-
-			return result;
-
-		},
-		select : function(selector, cache, callback, context){
-			var result;
-
-			if (typeof cache == "function"){
-				context = callback;
-				callback = cache;
-				cache = true;
-			}
-
-			if (cache && this.selectorsCache.contains(selector)){
-				result = this.selectorsCache.get(selector);
-			} else {
-				result = new TokensCollection(this.selectIteration(selector));
-				this.selectorsCache.add(selector, result);
-			}
-
-			if (callback){
-				result.iterate(callback, context)
-			};
-
-			return result;
-
-		},
-		/**Dom props
-		 */
 	}, "Node");
 
 	/*SPRITE*/
@@ -854,7 +863,7 @@ define(function(){
 		}
 	}, "Texture");
 
-	var Sprite = tools.inheritCLASS(Node, {
+	var Sprite = tools.extendCLASS(Node, {
 		constructor : function(texture){
 			if (texture) this.texture = texture;	
 		},
@@ -909,7 +918,7 @@ define(function(){
 		}
 	}, "Sprite");
 
-	var Graphics = tools.inheritCLASS(Node, {
+	var Graphics = tools.extendCLASS(Node, {
 		constructor : function(){
 			this.primitives = new TokensCollection;
 			this.activePath = null;
@@ -1302,7 +1311,7 @@ define(function(){
 		}
 	}, "Graphics");
 
-	var Text = tools.inheritCLASS(Node, {
+	var Text = tools.extendCLASS(Node, {
 		constructor : function(text, styles){
 			this._text = text;
 			this.styles = styles;
@@ -1370,7 +1379,7 @@ define(function(){
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	/*PIXTON*/
-	Pixton = tools.inheritCLASS(Node, {
+	Pixton = tools.extendCLASS(Node, {
 		constructor : function(options){
 			this._fps = 0;
 			this.options = options = (options || {});
