@@ -10,7 +10,10 @@ define(function(){
 		"pointerup" : true
 	};
 
-	var Tools = function(){};
+	var Tools = function(){
+		this.canvas = document.createElement("canvas");
+		this.ctx = this.canvas.getContext("2d");
+	};
 	Tools.prototype = {
 		superTrimString : function(input){
 			input = input.replace(/\s\s+/g, " ");
@@ -148,8 +151,78 @@ define(function(){
 			return Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
 		},
 	};
-
 	var tools = new Tools;
+
+	/*gradient*/
+	var Gradient = function(x0, y0, x1, y1, colors, onCreate){
+		this.stopColors = colors || [];
+
+		this.x0 = x0;
+		this.y0 = y0;
+		this.x1 = x1;
+		this.y1 = y1;
+
+		this.update();
+
+		if (typeof onCreate == "function"){
+			onCreate(this);
+		}
+	};
+
+	window.Gradient = Gradient;
+
+	Gradient.prototype = {
+		valueOf : function(){
+			return this.__gradient;
+		},
+		update : function(){
+			this.__gradient = tools.ctx.createLinearGradient(this.x0, this.y0, this.x1, this.y1);
+			this.__applyStopColors();
+		},
+		clean : function(){
+			this.stopColors.length = 0;
+		},	
+		addColorStop : function(offset, color){
+			this.stopColors.push([offset, color]);
+		},
+		set x0(v){
+			this._x0 = v;
+		},
+		get x0(){
+			return this._x0 || 0;
+		},
+		set y0(v){
+			this._y0 = v;
+		},
+		get y0(){
+			return this._y0 || 0;
+		},
+		set x1(v){
+			this._x1 = v;
+		},
+		get x1(){
+			return this._x1 || 0;
+		},
+		set y1(v){
+			this._y1 = v;
+		},
+		get y1(){
+			return this._y1 || 0;
+		},
+		__applyStopColors : function(){
+			for (var a = 0, offset, color, l = this.stopColors.length; a < l; a++){
+				offset = this.getOffset(this.stopColors[a][0]);
+				color  = this.getColor(this.stopColors[a][1]);
+				this.__gradient.addColorStop(offset, color);
+			}
+		},
+		getColor : function(token){
+			return token;
+		},
+		getOffset : function(token){
+			return token;
+		}
+	};
 
 	/*scene builder*/
 	var SceneBuilder = tools.CLASS({
@@ -1020,7 +1093,7 @@ define(function(){
 			this.activePath = null;
 
 			this.fillAlpha = 1;
-			this.fillColor = "#000000";Graphics
+			this.fillColor = "#000000";
 
 			this.lineAlpha = 1;
 			this.lineColor = "#000000";
@@ -1228,21 +1301,27 @@ define(function(){
 					}
 				}
 
-				context.strokeStyle = data.lineColor;
+				context.strokeStyle = data.lineColor.valueOf();
 				context.globalAlpha = data.lineAlpha;
 				context.lineWidth = data.lineWidth;
 				context.lineJoin = data.lineJoin;
 				context.lineCap = data.lineCap;
 				context.closePath();
 
-				context.shadowColor = data.shadowColor || "#000000";
+				context.shadowColor = (data.shadowColor || "#000000").valueOf();
 				context.shadowBlur = data.shadowBlur || 0;
 				context.shadowOffsetX = data.shadowOffsetX || 0;
 				context.shadowOffsetY = data.shadowOffsetY || 0;
 
 				context.stroke();
 
-				context.fillStyle = data.fillColor;
+				// if (data.fillColor.stopColors){
+
+				// 	console.log(data.fillColor.valueOf());
+				// 	debugger;
+				// }
+
+				context.fillStyle = data.fillColor.valueOf();
 				context.globalAlpha = data.fillAlpha;
 				context.fill();
 
@@ -1265,12 +1344,12 @@ define(function(){
 					}
 				}
 
-				context.strokeStyle = data.lineColor;
+				context.strokeStyle = data.lineColor.valueOf();
 				context.globalAlpha = data.lineAlpha;
 				context.lineWidth = data.lineWidth;
 				context.lineJoin = data.lineJoin;
 				context.lineCap = data.lineCap;
-				context.shadowColor = data.shadowColor || "#000000";
+				context.shadowColor = (data.shadowColor || "#000000").valueOf();
 				context.shadowBlur = data.shadowBlur || 0;
 				context.shadowOffsetX = data.shadowOffsetX || 0;
 				context.shadowOffsetY = data.shadowOffsetY || 0;
@@ -1315,20 +1394,20 @@ define(function(){
 							context.beginPath();
 							context.globalAlpha = current.lineAlpha || 1;
 
-							context.shadowColor = current.shadowColor || "#000000";
+							context.shadowColor = (current.shadowColor || "#000000").valueOf();
 							context.shadowBlur = current.shadowBlur || 0;
 							context.shadowOffsetX = current.shadowOffsetX || 0;
 							context.shadowOffsetY = current.shadowOffsetY || 0;
 
 							context.rect((dx + current.x) * dsx, (dy + current.y) * dsy, current.w * dsx, current.h * dsy);
-							context.fillStyle = current.fillColor;
+							context.fillStyle = current.fillColor.valueOf();
 							context.globalAlpha = current.fillAlpha || 1;
 							context.fillRect((dx + current.x) * dsx, (dy + current.y) * dsy, current.w * dsx, current.h * dsy);
 
 							if (current.lineWidth){
 								context.lineWidth = current.lineWidth || 0;
 								context.globalAlpha = current.lineAlpha;
-								context.strokeStyle = current.lineColor;
+								context.strokeStyle = current.lineColor.valueOf();
 								context.stroke();
 							}
 
@@ -1339,7 +1418,7 @@ define(function(){
 
 						break;
 						case "circle":
-							context.shadowColor = current.shadowColor || "#000000";
+							context.shadowColor = (current.shadowColor || "#000000").valueOf();
 							context.shadowBlur = current.shadowBlur || 0;
 							context.shadowOffsetX = current.shadowOffsetX || 0;
 							context.shadowOffsetY = current.shadowOffsetY || 0;
@@ -1350,14 +1429,14 @@ define(function(){
 							context.scale(dsx, dsy);
 							context.arc(0, 0, current.radius, 0, 2 * Math.PI, false);
 							context.restore();
-							context.fillStyle = current.fillColor;
+							context.fillStyle = current.fillColor.valueOf();
 							context.globalAlpha = current.fillAlpha || 1;
 							context.fill();
 
 							if (current.lineWidth){
 								context.lineWidth = current.lineWidth || 0;
 								context.globalAlpha = current.lineAlpha || 1;
-								context.strokeStyle = current.lineColor;
+								context.strokeStyle = current.lineColor.valueOf();
 								context.stroke();
 							}
 
@@ -1380,7 +1459,7 @@ define(function(){
 
 						break;
 						case "arc":
-							context.shadowColor = current.shadowColor || "#000000";
+							context.shadowColor = (current.shadowColor || "#000000").valueOf();
 							context.shadowBlur = current.shadowBlur || 0;
 							context.shadowOffsetX = current.shadowOffsetX || 0;
 							context.shadowOffsetY = current.shadowOffsetY || 0;
@@ -1393,14 +1472,14 @@ define(function(){
 
 							context.arc(0, 0, current.radius, current.startAngle, current.endAngle);
 							context.restore();
-							context.fillStyle = current.fillColor;
+							context.fillStyle = current.fillColor.valueOf();
 							context.globalAlpha = current.fillAlpha || 1;
 							context.fill();
 
 							if (current.lineWidth){
 								context.lineWidth = current.lineWidth || 0;
 								context.globalAlpha = current.lineAlpha || 1;
-								context.strokeStyle = current.lineColor;
+								context.strokeStyle = current.lineColor.valueOf();
 								context.stroke();
 							}
 
@@ -1500,7 +1579,7 @@ define(function(){
 				dsy *= this.scale.y;
 
 				context.font = this.styles.fontSize + " " + this.styles.fontFamily;
-				context.fillStyle = this.styles.color;
+				context.fillStyle = this.styles.color.valueOf();
 				context.textAlign = this.styles.textAlign;
 				context.fillText(this.text, dx * dsx, dy * dsy);
 			}
@@ -1525,6 +1604,8 @@ define(function(){
 			this.render = this.render.bind(this);
 			this._onUserEvent = this._onUserEvent.bind(this);
 			this.setupInteractivity();
+
+			this.Gradient = Gradient;
 
 		},
 		sceneBuilder : {
@@ -1756,6 +1837,7 @@ define(function(){
 		}
 	}, "Pixton");
 
+	Pixton.Gradient = Gradient;
 	Pixton.tools = new Tools;
 	Pixton.Node = Pixton.Container = Node;
 	Pixton.Sprite = Sprite;
