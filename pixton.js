@@ -57,6 +57,21 @@ define(function(){
 			}
 
 		},
+		getMergedPrototype : function(prototypeA, prototypeB){
+			var result = {};
+
+			for (var k in prototypeA){
+				result[k] = prototypeA[k];
+			}
+
+			if (prototypeB){
+				for (k in prototypeB){
+					result[k] = prototypeB[k];
+				}
+			}
+
+			return result;
+		},
 		normalizePrototype : function(prototype){
 			for (var k in prototype){
 				if (typeof prototype[k] == "function" && k != "constructor"){
@@ -73,19 +88,19 @@ define(function(){
 		inheritCLASS : function(SuperC, prototype, name){
 			prototype = this.normalizePrototype(prototype);
 
-			var _super;
-			var C = prototype.constructor;
+			var _constructor = prototype.constructor;
 			delete prototype.constructor;
 
 			var CLASS = function(){
 				SuperC.apply(this, arguments);
-				C.apply(this, arguments);
+				_constructor.apply(this, arguments);
 			};
 
 			CLASS = eval(["var ", name, "=", CLASS.toString(), ";", name, ";"].join(""));
 
-			Object.defineProperties(CLASS.prototype, SuperC.prototype._prototype);
-			Object.defineProperties(CLASS.prototype, prototype);
+			var mergedPrototype = this.getMergedPrototype(SuperC.__prototype, prototype);
+
+			Object.defineProperties(CLASS.prototype, mergedPrototype);
 
 			for (var k in prototype){
 				if (prototype[k].static){
@@ -93,39 +108,21 @@ define(function(){
 				}
 			}
 
-			name = name || "inherited class";
+			name = name || "inherited from " + SuperC.name;
 
-			Object.defineProperty(CLASS.prototype, "CLASS_NAME", {
-				writable : false,
-				configurable : false,
-				value : name + " extends " + SuperC.CLASS_NAME
-			}); 
-			Object.defineProperty(CLASS, "CLASS_NAME", {
-				writable : false,
-				configurable : false,
-				value : name + " extends " + SuperC.CLASS_NAME
-			});
-
-			Object.defineProperty(CLASS.prototype, "super", {
-				writable : false,
-				configurable : false,
-				value : function(name){
-					return SuperC.prototype[name].apply(this, Array.prototype.splice.call(arguments, 1, arguments.length));
-				}
-			});
-			
-			CLASS.prototype._prototype = prototype;
+			CLASS.__prototype = mergedPrototype;
+			CLASS.name = name;
 
 			return CLASS;
 		},
 		CLASS : function(prototype, name){
 			prototype = this.normalizePrototype(prototype);
 
-			var C = prototype.constructor;
+			var _constructor = prototype.constructor;
 			delete prototype.constructor;
 
 			var CLASS = function(){
-				C.apply(this, arguments);
+				_constructor.apply(this, arguments);
 			};
 
 			CLASS = eval(["var ", name, "=", CLASS.toString(), ";", name, ";"].join(""));
@@ -138,23 +135,10 @@ define(function(){
 				}
 			}
 
-			name = name || "class";
+			name = name || "Anonymous";
 
-			Object.defineProperty(CLASS.prototype, "CLASS_NAME", {
-				writable : false,
-				configurable : false,
-				value : name
-			});
-
-			Object.defineProperty(CLASS, "CLASS_NAME", {
-				writable : false,
-				configurable : false,
-				value : name
-			});
-
-			
-
-			CLASS.prototype._prototype = prototype;
+			CLASS.__prototype = prototype;
+			CLASS.name = name;
 
 			return CLASS;
 		},
@@ -176,27 +160,32 @@ define(function(){
 	};
 	var tools = new Tools;
 
+
+	/*DOM Proxy*/
+
+
 	/*gradient*/
-	var Gradient = function(x0, y0, x1, y1, colors, onCreate){
-		this.stopColors = colors || [];
+	var Gradient = tools.CLASS({
+		constructor : function(x0, y0, x1, y1, colors, onCreate){
+			this.valueOf = this.valueOf.bind(this);
+			this.stopColors = colors || [];
 
-		this.x0 = x0;
-		this.y0 = y0;
-		this.x1 = x1;
-		this.y1 = y1;
+			this.x0 = x0;
+			this.y0 = y0;
+			this.x1 = x1;
+			this.y1 = y1;
 
-		this.update();
+			this.update();
 
-		if (typeof onCreate == "function"){
-			onCreate(this);
-		}
-	};
-
-	window.Gradient = Gradient;
-
-	Gradient.prototype = {
-		valueOf : function(){
-			return this.__gradient;
+			if (typeof onCreate == "function"){
+				onCreate(this);
+			}
+		},
+		valueOf : {
+			value : function(){
+				return this.__gradient;
+			},
+			writable : true
 		},
 		update : function(){
 			this.__gradient = tools.ctx.createLinearGradient(this.x0, this.y0, this.x1, this.y1);
@@ -208,29 +197,37 @@ define(function(){
 		addColorStop : function(offset, color){
 			this.stopColors.push([offset, color]);
 		},
-		set x0(v){
-			this._x0 = v;
+		x0 : {
+			set : function(v){
+				this._x0 = v;
+			},
+			get : function(){
+				return this._x0 || 0;
+			},
 		},
-		get x0(){
-			return this._x0 || 0;
+		y0 : {
+			set : function(v){
+				this._y0 = v;
+			},
+			get : function(){
+				return this._y0 || 0;
+			},
 		},
-		set y0(v){
-			this._y0 = v;
+		x1 : {
+			set : function(v){
+				this._x1 = v;
+			},
+			get : function(){
+				return this._x1 || 0;
+			},
 		},
-		get y0(){
-			return this._y0 || 0;
-		},
-		set x1(v){
-			this._x1 = v;
-		},
-		get x1(){
-			return this._x1 || 0;
-		},
-		set y1(v){
-			this._y1 = v;
-		},
-		get y1(){
-			return this._y1 || 0;
+		y1 : {
+			set : function(v){
+				this._y1 = v;
+			},
+			get : function(){
+				return this._y1 || 0;
+			},
 		},
 		__applyStopColors : function(){
 			for (var a = 0, offset, color, l = this.stopColors.length; a < l; a++){
@@ -245,9 +242,22 @@ define(function(){
 		getOffset : function(token){
 			return token;
 		}
-	};
+	}, "Pixton_Gradient");
 
-	/*scene builder*/
+	var DOMProxy = tools.CLASS({
+		constructor : function(){
+			this.dom = document.createElement(this.type);
+			console.log(this.dom);
+		},
+		sync : function(){
+			if (this.parent){
+				this.parent.appendChild(this);
+			}
+		},
+		appendChild : function(child){
+			this.dom.appendChild(child.dom);
+		}
+	}, "Pixton_DOMProxy");
 
 	/*Tokelist*/
 	var TokensCollection = tools.CLASS({
@@ -394,7 +404,7 @@ define(function(){
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	/*NODE*/
-	var Node = tools.CLASS({
+	var Node = tools.inheritCLASS(DOMProxy, {
 		constructor : function(options){
 			options = options || {};
 			this.children = new TokensCollection();
@@ -720,6 +730,8 @@ define(function(){
 			this.children.add(child);
 			child.childIndex = this.children.content.size - 1;
 
+			// this.sync();
+
 			return this;
 		},
 		remove : function(){
@@ -807,7 +819,9 @@ define(function(){
 
 			return result;
 
-		}
+		},
+		/**Dom props
+		 */
 	}, "Node");
 
 	/*SPRITE*/
