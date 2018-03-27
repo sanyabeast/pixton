@@ -3,6 +3,9 @@ define(function(){
 	var IS_TOUCH_DEVICE = !!(('ontouchstart' in window) || window.DocumentTouch && document instanceof DocumentTouch);
 
 	var Pixton;
+	var instances = [];
+
+	console.log(1);
 
 	/*TOOlS*/
 	var multiDispatchedEvents = {
@@ -14,6 +17,7 @@ define(function(){
 		this.canvas = document.createElement("canvas");
 		this.ctx = this.canvas.getContext("2d");
 	};
+
 	Tools.prototype = {
 		superTrimString : function(input){
 			input = input.replace(/\s\s+/g, " ");
@@ -53,7 +57,22 @@ define(function(){
 			}
 
 		},
+		normalizePrototype : function(prototype){
+			for (var k in prototype){
+				if (typeof prototype[k] == "function" && k != "constructor"){
+					prototype[k] = {
+						value : prototype[k],
+						writable : true,
+						configurable : true
+					};
+				}
+			}
+
+			return prototype;
+		},
 		inheritCLASS : function(SuperC, prototype, name){
+			prototype = this.normalizePrototype(prototype);
+
 			var _super;
 			var C = prototype.constructor;
 			delete prototype.constructor;
@@ -62,6 +81,8 @@ define(function(){
 				SuperC.apply(this, arguments);
 				C.apply(this, arguments);
 			};
+
+			CLASS = eval(["var ", name, "=", CLASS.toString(), ";", name, ";"].join(""));
 
 			Object.defineProperties(CLASS.prototype, SuperC.prototype._prototype);
 			Object.defineProperties(CLASS.prototype, prototype);
@@ -78,8 +99,7 @@ define(function(){
 				writable : false,
 				configurable : false,
 				value : name + " extends " + SuperC.CLASS_NAME
-			});
-
+			}); 
 			Object.defineProperty(CLASS, "CLASS_NAME", {
 				writable : false,
 				configurable : false,
@@ -99,6 +119,8 @@ define(function(){
 			return CLASS;
 		},
 		CLASS : function(prototype, name){
+			prototype = this.normalizePrototype(prototype);
+
 			var C = prototype.constructor;
 			delete prototype.constructor;
 
@@ -106,6 +128,7 @@ define(function(){
 				C.apply(this, arguments);
 			};
 
+			CLASS = eval(["var ", name, "=", CLASS.toString(), ";", name, ";"].join(""));
 
 			Object.defineProperties(CLASS.prototype, prototype);
 
@@ -225,147 +248,6 @@ define(function(){
 	};
 
 	/*scene builder*/
-	var SceneBuilder = tools.CLASS({
-		constructor : function(){
-
-		},
-
-		make : {
-			value : function(data){
-				var description = this.convert2Obj(data);
-				var scene = this.buildScene(description);
-				return scene;
-			}
-		},
-
-		buildScene : {
-			value : function(description){
-
-				var result = iterate(description);
-
-				function iterate(description){
-					var node;
-
-					switch(description.type.toLowerCase()){
-						case "sprite":
-							node = new Pixton.Sprite();
-						break;
-						case "graphics":
-							node = new Pixton.Graphics();
-						break;
-						case "text":
-							node = new Pixton.Text();
-						break;
-						default:
-							node = new Pixton.Node();
-						break;
-					}
-
-					node.setup(description);
-
-					for (var a = 0; a < description.children.length; a++){
-						node.addChild(iterate(description.children[a]));
-					}
-
-
-					return node;
-
-				}
-
-				return result;
-			}
-		},
-
-		convert2Obj : {
-			value : function(data){
-				var type = this.typeof(data);
-
-
-				switch(type){
-					case "html":
-						return this.DOM2OBJ(this.HTML2DOM(data));
-					break;
-					case "dom":
-						return this.DOM2OBJ(data);
-					break;
-					case "tpl":
-						return this.DOM2OBJ(data.content.cloneNode(true).children[0]);
-					break;
-					case "json":
-						return JSON.parse(data);
-					break;
-					case "obj":
-						return data;
-					break;
-				}
-
-			}
-		},
-
-		typeof : {
-			value : function(data){
-				if (typeof data == "string"){
-					if (data.indexOf("<") == 0 && data.indexOf(">") == data.length - 1){
-						return "html";
-					} else {
-						return "json";
-					}
-				} else if (typeof data == "object"){
-					if (data instanceof window.Node){
-						if (data.tagName == "TEMPLATE"){
-							return "tpl";
-						} else {
-							return "dom";							
-						}
-					} else {
-						return "obj";
-					}
-				}
-			}
-		},
-
-		HTML2DOM : {
-			value : function(html){
-				var el = document.createElement("div");
-				el.innerHTML = html;
-				var result = el.children[0];
-				el.remove();
-				return result;
-			}
-		},
-
-		DOM2OBJ : {
-			value : function(dom){
-				var result = iterate(dom);
-
-				function iterate(node){
-					var description = {};
-
-					for (var a = 0; a < node.attributes.length; a++){
-						description[node.attributes[a].name] = node.attributes[a].value;
-					}
-
-					if(node.childNodes[0]) description.value = tools.superTrimString(node.childNodes[0].nodeValue);
-					description.type = node.tagName;
-					description.children = [];
-
-					for (var a = 0; a < node.children.length; a++){
-						description.children.push(iterate(node.children[a]));
-					}
-
-					return description;
-
-				}
-
-				return result;
-
-			}
-		}
-
-
-
-	}, "SceneBuilder");
-
 
 	/*Tokelist*/
 	var TokensCollection = tools.CLASS({
@@ -383,88 +265,62 @@ define(function(){
 			},
 			configurable : true
 		},
-		add : {
-			value : function(value){
-				this.content.push(value);
-				this.content.size = this.content.length;
-				return this.content[this.content.size - 1];
-			},
-			writable : true,
-			configurable : true
+		add : function(value){
+			this.content.push(value);
+			this.content.size = this.content.length;
+			return this.content[this.content.size - 1];
 		},
-		get : {
-			value : function(id){
-				return this.content[id];
-			}
+		get : function(id){
+			return this.content[id];
 		},
-		remove : {
-			value : function(value){
-				tools.removeFromArrByValue(this.content, value);
-				this.content.size = this.content.length;
-			},
-			writable : true,
-			configurable : true
+		remove : function(value){
+			tools.removeFromArrByValue(this.content, value);
+			this.content.size = this.content.length;
 		},
-		removeByIndex : {
-			value : function(index){
-				tools.removeFromArrByIndex(this.content, index);
-				this.content.size = this.content.length;
-			}
+		removeByIndex : function(index){
+			tools.removeFromArrByIndex(this.content, index);
+			this.content.size = this.content.length;
 		},
-		iterate : {
-			value : function(callback, context){
-				var result;
-				this.loop.break = this.loop.continue = false;
+		iterate : function(callback, context){
+			var result;
+			this.loop.break = this.loop.continue = false;
 
-				for (var a = 0; a < this.content.size; a++){
-					if (context){
-						result = callback.call(context, this.content[a], a, this.loop);
-					} else {
-						result = callback(this.content[a], a, this.loop);
-					}
-
-					if (this.loop.break) break;
+			for (var a = 0; a < this.content.size; a++){
+				if (context){
+					result = callback.call(context, this.content[a], a, this.loop);
+				} else {
+					result = callback(this.content[a], a, this.loop);
 				}
 
-				return result;
+				if (this.loop.break) break;
+			}
 
-			},
-			writable : true,
-			configurable : true
+			return result;
+
 		},
-		reverseIterate : {
-			value : function(callback, context){
-				var result;
-				this.loop.break = this.loop.continue = false;
+		reverseIterate : function(callback, context){
+			var result;
+			this.loop.break = this.loop.continue = false;
 
-				for (var a = this.content.size - 1; a >= 0; a--){
-					if (context){
-						result = callback.call(context, this.content[a], a, this.loop);
-					} else {
-						result = callback(this.content[a], a, this.loop);
-					}
-
-					if (this.loop.break) break;
+			for (var a = this.content.size - 1; a >= 0; a--){
+				if (context){
+					result = callback.call(context, this.content[a], a, this.loop);
+				} else {
+					result = callback(this.content[a], a, this.loop);
 				}
 
-				return result;
+				if (this.loop.break) break;
+			}
 
-			},
+			return result;
+
 		},
-		contains : {
-			value : function(value){
-				return this.content.indexOf(value) > -1;
-			},
-			writable : true,
-			configurable : true
+		contains : function(value){
+			return this.content.indexOf(value) > -1;
 		},
-		clear : {
-			value : function(){
-				this._content.length = 0;
-				this._content.size = 0;
-			},
-			writable : true,
-			configurable : true
+		clear : function(){
+			this._content.length = 0;
+			this._content.size = 0;
 		}
 	}, "TokensCollection");
 
@@ -477,47 +333,37 @@ define(function(){
 				this._content = content || {};
 			}
 		},
-		add : {
-			value : function(name, value){
-				this.content[name] = value;
-				return this.content[name];
-			}
+		add : function(name, value){
+			this.content[name] = value;
+			return this.content[name];
 		},
-		remove : {
-			value : function(name){
-				delete this.content[name];
-			}
+		remove : function(name){
+			delete this.content[name];
 		},
-		iterate : {
-			value : function(callback, context){
-				var result;
-				this.loop.break = this.loop.continue = false;
+		iterate : function(callback, context){
+			var result;
+			this.loop.break = this.loop.continue = false;
 
-				for (var a in this.content){
-					if (context){
-						result = callback.call(context, this.content[a], a, this.loop);
-					} else {
-						result = callback(this.content[a], a, this.loop);
-					}
-
-					if (this.loop.break) break;
+			for (var a in this.content){
+				if (context){
+					result = callback.call(context, this.content[a], a, this.loop);
+				} else {
+					result = callback(this.content[a], a, this.loop);
 				}
 
-				return result;
+				if (this.loop.break) break;
+			}
 
-			},
+			return result;
+
 		},
-		contains : {
-			value : function(name){
-				return typeof this.content[name] != "undefined";
-			}
+		contains : function(name){
+			return typeof this.content[name] != "undefined";
 		},
-		clear : {
-			value : function(){
-				this.iterate(function(value, name){
-					delete this.content[name];
-				}, this)
-			}
+		clear : function(){
+			this.iterate(function(value, name){
+				delete this.content[name];
+			}, this)
 		}
 	}, "TokensList");
 
@@ -538,12 +384,10 @@ define(function(){
 			get : function(){ return this._y },
 			set : function(y){ this._y = y; }
 		},
-		set : {
-			value : function(x, y){
-				if (typeof y == "undefined") y = x;
-				this.x = x;
-				this.y = y;
-			}
+		set : function(x, y){
+			if (typeof y == "undefined") y = x;
+			this.x = x;
+			this.y = y;
 		}
 	}, "Point");
 
@@ -590,19 +434,18 @@ define(function(){
 			};
 
 		},
-		setup : {
-			value : function(data){
-				if (data.x) this.position.x = tools.numberize(data.x);
-				if (data.y) this.position.y = tools.numberize(data.y);
-				if (data.scale) this.position.scale.set(tools.numberize(data.scale) || 1);
-				if (data.scaleX) this.position.scale.x = tools.numberize(data.scaleX) || 1;
-				if (data.scaleY) this.position.scale.y = tools.numberize(data.scaleY) || 1;
-				if (data.id) this.id = data.id;
-				if (data.class) this.classes.content = data.class.split(" ");
-				if (data.invisible) this.visible = false;
+		/**DOM-related methos
+		  */
+		setup : function(data){
+			if (data.x) this.position.x = tools.numberize(data.x);
+			if (data.y) this.position.y = tools.numberize(data.y);
+			if (data.scale) this.position.scale.set(tools.numberize(data.scale) || 1);
+			if (data.scaleX) this.position.scale.x = tools.numberize(data.scaleX) || 1;
+			if (data.scaleY) this.position.scale.y = tools.numberize(data.scaleY) || 1;
+			if (data.id) this.id = data.id;
+			if (data.class) this.classes.content = data.class.split(" ");
+			if (data.invisible) this.visible = false;
 
-			},
-			writable : true
 		},
 		childIndex : {
 			get : function(){
@@ -618,20 +461,18 @@ define(function(){
 			},
 			configurable : true
 		},
-		drawDebug : {
-			value : function(context){
-				return;
-				var strokeStyle = context.strokeStyle;
-				context.lineWidth = 1;
-				context.strokeStyle = "#ffffff";
-				context.rect(this.calculated.position.x, this.calculated.position.y, this.size.x, this.size.y);
-				context.stroke();
-				context.font = "16px Monospace";
-				context.fillStyle = "#ffffff";
-				context.fillText(this.type, this.calculated.position.x + 8, this.calculated.position.y + 16);
-				context.strokeStyle = strokeStyle;
+		drawDebug : function(context){
+			return;
+			var strokeStyle = context.strokeStyle;
+			context.lineWidth = 1;
+			context.strokeStyle = "#ffffff";
+			context.rect(this.calculated.position.x, this.calculated.position.y, this.size.x, this.size.y);
+			context.stroke();
+			context.font = "16px Monospace";
+			context.fillStyle = "#ffffff";
+			context.fillText(this.type, this.calculated.position.x + 8, this.calculated.position.y + 16);
+			context.strokeStyle = strokeStyle;
 
-			}
 		},
 		visible : {
 			get : function(){
@@ -660,160 +501,154 @@ define(function(){
 				this._buttonMode = value;
 			}
 		},
-		checkInteractivity : {
-			value : function(eventType, x, y, canvas, evt, dx, dy, dispatched){
-				dx += this.calculated.position.x;
-				dy += this.calculated.position.y;
+		checkInteractivity : function(eventType, x, y, canvas, evt, dx, dy, dispatched){
+			dx += this.calculated.position.x;
+			dy += this.calculated.position.y;
 
-				if (multiDispatchedEvents[eventType]){
-					dispatched = false;
-				}
-
-				if (dispatched){
-					return;
-				}
-
-				var result = false;
-
-				if (this.interactive && !dispatched){
-					result = this.processInteractivity(eventType, x, y, canvas, evt, dx, dy);
-				} 		
-
+			if (multiDispatchedEvents[eventType]){
 				dispatched = false;
-
-				this.children.reverseIterate(function(child, id, loop){
-					if (child.checkInteractivity(eventType, x, y, canvas, evt, dx, dy, dispatched)){
-						dispatched = true;
-					}
-				}, this);
-
-				return result;
 			}
-		},
-		processInteractivity : {
-			value : function(eventType, x, y, canvas, evt, dx, dy){
-				var inside = tools.coordsBelognsRect(x, y, dx, dy, this.size.x, this.size.y);
-				var result = false;
 
-				this.eventData.originalEvent = evt;
+			if (dispatched){
+				return;
+			}
+
+			var result = false;
+
+			if (this.interactive && !dispatched){
+				result = this.processInteractivity(eventType, x, y, canvas, evt, dx, dy);
+			} 		
+
+			dispatched = false;
+
+			this.children.reverseIterate(function(child, id, loop){
+				if (child.checkInteractivity(eventType, x, y, canvas, evt, dx, dy, dispatched)){
+					dispatched = true;
+				}
+			}, this);
+
+			return result;
+		},
+		processInteractivity : function(eventType, x, y, canvas, evt, dx, dy){
+			var inside = tools.coordsBelognsRect(x, y, dx, dy, this.size.x, this.size.y);
+			var result = false;
+
+			this.eventData.originalEvent = evt;
+			this.eventData.pointer.x = x;
+			this.eventData.pointer.y = y;
+
+			this.eventData.extra.deltaX = x - this.eventData.extra.prevX;
+			this.eventData.extra.deltaY = y - this.eventData.extra.prevY;
+
+			this.eventData.extra.prevX = x;
+			this.eventData.extra.prevY = y;
+
+
+			this.eventData.extra.wheelDeltaX = evt.wheelDeltaX || this.eventData.extra.wheelDeltaX;
+			this.eventData.extra.wheelDeltaY = evt.wheelDeltaY || this.eventData.extra.wheelDeltaY;
+			
+			if (eventType == "mousewheel" && this.hovered){
+				result = this.runCallback("mousewheel");
+			}
+
+			if (eventType == "pointerout"){
+				if (this.hovered){
+					this.hovered = false;
+					result = this.runCallback("pointerout");
+				}
+			}
+
+			if (eventType == "pointerup" && evt.isTouchEvent){
+				this.hovered = false;
+				this.captured = false;
+				result = this.runCallback("pointerout");
+			}
+
+			if (eventType == "pointerdown" && evt.isTouchEvent && inside){
+				this.hovered = true;
+				result = this.runCallback("pointerover");
+			}
+
+			if (eventType == "pointermove" && inside && !this.hovered){
+				if (this.buttonMode) canvas.style.cursor = "pointer";
+				this.hovered = true;
+				result = this.runCallback("pointerover");
+			}
+
+			if ((eventType == "pointermove") && !inside && this.hovered){
+				if (this.buttonMode) canvas.style.cursor = "default";
+				this.hovered = false;
+				result = this.runCallback("pointerout");
+			}
+
+			if (eventType == "pointermove" && inside && this.hovered){
+				result = this.runCallback("pointermove");
+			}
+
+			if (eventType == "pointertap" && this.hovered && inside){
+				this.captured = false;
+				result = this.runCallback("pointertap");
+			}
+
+			if (eventType == "pointerdown" && this.hovered && inside){
+				this.captured = true;
+				result = this.runCallback("pointerdown");
+			}
+
+			if (eventType == "pointerup" && inside){
+				this.captured = false;
+				this.eventData.extra.panningStarted = false;
+				result = this.runCallback("pointerup");
+			}
+
+			if (eventType == "pointerup" && !inside){
+				this.hovered = this.captured = false;
+				result = this.runCallback("pointerupoutside");
+			}
+
+			if (eventType == "pointerdown" && !inside){
+				this.hovered = this.captured = false;
+				result = this.runCallback("pointerdownoutside");
+			}
+
+			if (eventType == "pointertap" && !inside){
+				this.hovered = this.captured = false;
+				result = this.runCallback("pointertapoutside");
+			}
+
+			if (eventType == "pointermove" && this.captured){
+				result = this.runCallback("pointerdrag");
+			}
+
+			if (eventType == "panning"){
+
+				if (this.eventData.extra.panningStarted){
+					var distance = tools.distancePoints2(evt.touch1X, evt.touch1Y, evt.touch2X, evt.touch2Y);
+					this.eventData.extra.panningDelta = this.eventData.extra.prevPanningDistance / distance;
+					this.eventData.extra.prevPanningDistance = distance;
+				} else {
+					this.eventData.extra.panningStarted = true;
+					this.eventData.extra.prevPanningDistance = tools.distancePoints2(evt.touch1X, evt.touch1Y, evt.touch2X, evt.touch2Y);
+					this.eventData.extra.panningDelta = 1;
+				}
+
+
 				this.eventData.pointer.x = x;
 				this.eventData.pointer.y = y;
 
-				this.eventData.extra.deltaX = x - this.eventData.extra.prevX;
-				this.eventData.extra.deltaY = y - this.eventData.extra.prevY;
-
-				this.eventData.extra.prevX = x;
-				this.eventData.extra.prevY = y;
-
-
-				this.eventData.extra.wheelDeltaX = evt.wheelDeltaX || this.eventData.extra.wheelDeltaX;
-				this.eventData.extra.wheelDeltaY = evt.wheelDeltaY || this.eventData.extra.wheelDeltaY;
-				
-				if (eventType == "mousewheel" && this.hovered){
-					result = this.runCallback("mousewheel");
-				}
-
-				if (eventType == "pointerout"){
-					if (this.hovered){
-						this.hovered = false;
-						result = this.runCallback("pointerout");
-					}
-				}
-
-				if (eventType == "pointerup" && evt.isTouchEvent){
-					this.hovered = false;
-					this.captured = false;
-					result = this.runCallback("pointerout");
-				}
-
-				if (eventType == "pointerdown" && evt.isTouchEvent && inside){
-					this.hovered = true;
-					result = this.runCallback("pointerover");
-				}
-
-				if (eventType == "pointermove" && inside && !this.hovered){
-					if (this.buttonMode) canvas.style.cursor = "pointer";
-					this.hovered = true;
-					result = this.runCallback("pointerover");
-				}
-
-				if ((eventType == "pointermove") && !inside && this.hovered){
-					if (this.buttonMode) canvas.style.cursor = "default";
-					this.hovered = false;
-					result = this.runCallback("pointerout");
-				}
-
-				if (eventType == "pointermove" && inside && this.hovered){
-					result = this.runCallback("pointermove");
-				}
-
-				if (eventType == "pointertap" && this.hovered && inside){
-					this.captured = false;
-					result = this.runCallback("pointertap");
-				}
-
-				if (eventType == "pointerdown" && this.hovered && inside){
-					this.captured = true;
-					result = this.runCallback("pointerdown");
-				}
-
-				if (eventType == "pointerup" && inside){
-					this.captured = false;
-					this.eventData.extra.panningStarted = false;
-					result = this.runCallback("pointerup");
-				}
-
-				if (eventType == "pointerup" && !inside){
-					this.hovered = this.captured = false;
-					result = this.runCallback("pointerupoutside");
-				}
-
-				if (eventType == "pointerdown" && !inside){
-					this.hovered = this.captured = false;
-					result = this.runCallback("pointerdownoutside");
-				}
-
-				if (eventType == "pointertap" && !inside){
-					this.hovered = this.captured = false;
-					result = this.runCallback("pointertapoutside");
-				}
-
-				if (eventType == "pointermove" && this.captured){
-					result = this.runCallback("pointerdrag");
-				}
-
-				if (eventType == "panning"){
-
-					if (this.eventData.extra.panningStarted){
-						var distance = tools.distancePoints2(evt.touch1X, evt.touch1Y, evt.touch2X, evt.touch2Y);
-						this.eventData.extra.panningDelta = this.eventData.extra.prevPanningDistance / distance;
-						this.eventData.extra.prevPanningDistance = distance;
-					} else {
-						this.eventData.extra.panningStarted = true;
-						this.eventData.extra.prevPanningDistance = tools.distancePoints2(evt.touch1X, evt.touch1Y, evt.touch2X, evt.touch2Y);
-						this.eventData.extra.panningDelta = 1;
-					}
-
-
-					this.eventData.pointer.x = x;
-					this.eventData.pointer.y = y;
-
-					result = this.runCallback("panning");
-				}
-
-				return result;
-
+				result = this.runCallback("panning");
 			}
+
+			return result;
+
 		},
-		runCallback : {
-			value :  function(eventName){
-				if (this.callbacks.contains(eventName)) {
-					this.callbacks.get(eventName)(this.eventData, eventName);
-					return true;
-				}
-
-				return false;
+		runCallback : function(eventName){
+			if (this.callbacks.contains(eventName)) {
+				this.callbacks.get(eventName)(this.eventData, eventName);
+				return true;
 			}
+
+			return false;
 		},
 		tools : {
 			value : new Tools
@@ -839,159 +674,139 @@ define(function(){
 				this.position.y = y; 
 			},
 		},
-		render : {
-			value : function(parent, context, dx, dy, dsx, dsy){
-				if (!this.visible){
-					return;
-				}
-
-				dx += this.x;
-				dy += this.y;
-
-				dsx *= this.scale.x;
-				dsy *= this.scale.y;
-
-				var sw = 0, sh = 0;
-
-				this.children.iterate(function(child, index){
-					child.render(this, context, dx, dy, dsx, dsy);
-					if (child.x + child.size.x > sw) sw = child.x + child.size.x;
-					if (child.y + child.size.y > sh) sh = child.y + child.size.y;
-					if (child.x < 0){
-						this.calculated.position.x += child.calculated.position.x
-					} else {
-						this.calculated.position.x = this.position.x;
-					}
-
-					if (child.y < 0){
-						this.calculated.position.y += child.calculated.position.y
-					} else {
-						this.calculated.position.y = this.position.y;
-					}
-				}, this);
-
-				this.size.x = sw;
-				this.size.y = sh;
-
-				// this.drawDebug(context);
-
-			},
-			writable : true,
-			configurable : true
-		},
-		addChild : {
-			value : function(child){
-				if (arguments.length > 1){
-					tools.collectionMethod(arguments, this.addChild, this);
-					return this;
-				}
-
-				child.parent = this;
-				this.children.add(child);
-				child.childIndex = this.children.content.size - 1;
-
-				return this;
-			},
-		},
-		remove : {
-			value : function(){
-				if (this.parent){
-					this.parent.removeChild(this);
-				}
-
-				return this;
+		render : function(parent, context, dx, dy, dsx, dsy){
+			if (!this.visible){
+				return;
 			}
-		},
-		removeChild : {
-			value : function(child){
-				this.children.removeByIndex(child.childIndex);
-				this.children.iterate(function(child, index){
-					child.childIndex = index;
-				});
 
-				return this;
-			}
-		},
-		matchClassSelector : {
-			value : function(selector){
-				var classes = selector.split(".");
-				var matches = 0;
-				var targetMatchCount = classes.length;
+			dx += this.x;
+			dy += this.y;
 
-				for (var a = 0; a < classes.length; a++){
-					if (classes[a].length == 0){
-						targetMatchCount--;
-						continue;
-					}
+			dsx *= this.scale.x;
+			dsy *= this.scale.y;
 
-					if (this.classes.contains(classes[a])){
-						matches++;
-					} else {
-						matches--;
-						break;
-					}
+			var sw = 0, sh = 0;
 
-				}
-
-				return matches > 0 && (matches == targetMatchCount);
-
-			}
-		},
-		matchIdSelector : {
-			value : function(selector){
-				return this.id == selector.split("#")[1];
-			}
-		},
-		matchSelector : {
-			value : function(selector){
-				if (selector.indexOf("#") == 0){
-					return this.matchIdSelector(selector);
-				} else if (selector.indexOf(".") > -1){
-					return this.matchClassSelector(selector);
-				}
-
-			},
-		},
-		selectIteration : {
-			value : function(selector){
-				var result = [];
-
-				this.children.iterate(function(child){
-					if (child.matchSelector(selector)){
-						result.push(child);
-					};
-
-					result = tools.joinArray(result, child.selectIteration(selector));
-				});
-
-				return result;
-
-			}
-		},
-		select : {
-			value : function(selector, cache, callback, context){
-				var result;
-
-				if (typeof cache == "function"){
-					context = callback;
-					callback = cache;
-					cache = true;
-				}
-
-				if (cache && this.selectorsCache.contains(selector)){
-					result = this.selectorsCache.get(selector);
+			this.children.iterate(function(child, index){
+				child.render(this, context, dx, dy, dsx, dsy);
+				if (child.x + child.size.x > sw) sw = child.x + child.size.x;
+				if (child.y + child.size.y > sh) sh = child.y + child.size.y;
+				if (child.x < 0){
+					this.calculated.position.x += child.calculated.position.x
 				} else {
-					result = new TokensCollection(this.selectIteration(selector));
-					this.selectorsCache.add(selector, result);
+					this.calculated.position.x = this.position.x;
 				}
 
-				if (callback){
-					result.iterate(callback, context)
+				if (child.y < 0){
+					this.calculated.position.y += child.calculated.position.y
+				} else {
+					this.calculated.position.y = this.position.y;
+				}
+			}, this);
+
+			this.size.x = sw;
+			this.size.y = sh;
+
+			// this.drawDebug(context);
+
+		},
+		addChild : function(child){
+			if (arguments.length > 1){
+				tools.collectionMethod(arguments, this.addChild, this);
+				return this;
+			}
+
+			child.parent = this;
+			this.children.add(child);
+			child.childIndex = this.children.content.size - 1;
+
+			return this;
+		},
+		remove : function(){
+			if (this.parent){
+				this.parent.removeChild(this);
+			}
+
+			return this;
+		},
+		removeChild : function(child){
+			this.children.removeByIndex(child.childIndex);
+			this.children.iterate(function(child, index){
+				child.childIndex = index;
+			});
+
+			return this;
+		},
+		matchClassSelector : function(selector){
+			var classes = selector.split(".");
+			var matches = 0;
+			var targetMatchCount = classes.length;
+
+			for (var a = 0; a < classes.length; a++){
+				if (classes[a].length == 0){
+					targetMatchCount--;
+					continue;
+				}
+
+				if (this.classes.contains(classes[a])){
+					matches++;
+				} else {
+					matches--;
+					break;
+				}
+
+			}
+
+			return matches > 0 && (matches == targetMatchCount);
+
+		},
+		matchIdSelector : function(selector){
+			return this.id == selector.split("#")[1];
+		},
+		matchSelector : function(selector){
+			if (selector.indexOf("#") == 0){
+				return this.matchIdSelector(selector);
+			} else if (selector.indexOf(".") > -1){
+				return this.matchClassSelector(selector);
+			}
+
+		},
+		selectIteration : function(selector){
+			var result = [];
+
+			this.children.iterate(function(child){
+				if (child.matchSelector(selector)){
+					result.push(child);
 				};
 
-				return result;
+				result = tools.joinArray(result, child.selectIteration(selector));
+			});
 
+			return result;
+
+		},
+		select : function(selector, cache, callback, context){
+			var result;
+
+			if (typeof cache == "function"){
+				context = callback;
+				callback = cache;
+				cache = true;
 			}
+
+			if (cache && this.selectorsCache.contains(selector)){
+				result = this.selectorsCache.get(selector);
+			} else {
+				result = new TokensCollection(this.selectIteration(selector));
+				this.selectorsCache.add(selector, result);
+			}
+
+			if (callback){
+				result.iterate(callback, context)
+			};
+
+			return result;
+
 		}
 	}, "Node");
 
@@ -1020,10 +835,8 @@ define(function(){
 				this._loaded = key;
 			}
 		},
-		onLoad : {
-			value : function(data){
-				this._loaded = true;
-			}
+		onLoad : function(data){
+			this._loaded = true;
 		}
 	}, "Texture");
 
@@ -1043,16 +856,13 @@ define(function(){
 				}	
 			}
 		},
-		setup : {
-			value : function(data){
-				this.super("setup", data);
+		setup : function(data){
+			this.super("setup", data);
 
-				if (data.texture) {
-					this.texture = data.texture;
-				}
+			if (data.texture) {
+				this.texture = data.texture;
+			}
 
-			},
-			writable : true
 		},
 		type : {
 			get : function(){
@@ -1060,30 +870,28 @@ define(function(){
 			},
 			configurable : true
 		},
-		render : {
-			value : function(parent, context, dx, dy, dsx, dsy){
-				if (!this.visible){
-					return;
-				}
-
-				dx += this.x;
-				dy += this.y;
-
-				this.calculated.position.x = dx;
-				this.calculated.position.y = dy;
-
-				dsx *= this.scale.x;
-				dsy *= this.scale.y;
-
-				if (!this.texture.loaded) return;
-
-				context.drawImage(this.texture.image, dx, dy, this.texture.width * dsx, this.texture.height * dsy);
-				this.size._x = this.texture.width * this.scale.x;
-				this.size._y = this.texture.height * this.scale.y;
-
-				// this.drawDebug(context);
-
+		render : function(parent, context, dx, dy, dsx, dsy){
+			if (!this.visible){
+				return;
 			}
+
+			dx += this.x;
+			dy += this.y;
+
+			this.calculated.position.x = dx;
+			this.calculated.position.y = dy;
+
+			dsx *= this.scale.x;
+			dsy *= this.scale.y;
+
+			if (!this.texture.loaded) return;
+
+			context.drawImage(this.texture.image, dx, dy, this.texture.width * dsx, this.texture.height * dsy);
+			this.size._x = this.texture.width * this.scale.x;
+			this.size._y = this.texture.height * this.scale.y;
+
+			// this.drawDebug(context);
+
 		}
 	}, "Sprite");
 
@@ -1117,402 +925,366 @@ define(function(){
 			},
 			configurable : true
 		},
-		lineTo : {
-			value : function(x, y){
-				if (!this.activePath){
-					this.moveTo(x, y);
-				}
-
-				this.activePath.path.push(x);
-				this.activePath.path.push(y);
-
-				return this;
+		lineTo : function(x, y){
+			if (!this.activePath){
+				this.moveTo(x, y);
 			}
-		},
-		moveTo : {
-			value : function(x, y){
-				this.activePath = this.primitives.add({
-					type : "path",
-					lineColor : this.lineColor,
-					lineAlpha : this.lineAlpha,
-					lineWidth : this.lineWidth,
-					lineJoin  : this.lineJoin,
-					lineCap   : this.lineCap,
-					path : [x, y],
-					shadowColor : this.shadowColor,
-					shadowBlur : this.shadowBlur,
-					shadowOffsetX : this.shadowOffsetX,
-					shadowOffsetY : this.shadowOffsetY
-				});
 
-				return this;
+			this.activePath.path.push(x);
+			this.activePath.path.push(y);
+
+			return this;
+		},
+		moveTo : function(x, y){
+			this.activePath = this.primitives.add({
+				type : "path",
+				lineColor : this.lineColor,
+				lineAlpha : this.lineAlpha,
+				lineWidth : this.lineWidth,
+				lineJoin  : this.lineJoin,
+				lineCap   : this.lineCap,
+				path : [x, y],
+				shadowColor : this.shadowColor,
+				shadowBlur : this.shadowBlur,
+				shadowOffsetX : this.shadowOffsetX,
+				shadowOffsetY : this.shadowOffsetY
+			});
+
+			return this;
+		},
+		lineStyle : function(width, color, alpha){
+			this.lineWidth = width;
+			this.lineAlpha = alpha;
+			this.lineColor = color;
+
+			return this;
+		},
+		shadowStyle : function(color, blur, offsetX, offsetY){
+			if (!color){
+				this.shadowBlur = 0;
+				return;
 			}
-		},
-		lineStyle : {
-			value : function(width, color, alpha){
-				this.lineWidth = width;
-				this.lineAlpha = alpha;
-				this.lineColor = color;
 
-				return this;
-			},
-			writable : true,
-			configurable : true
+			this.shadowColor = color || this.shadowColor || "#000000";
+			this.shadowBlur = blur || this.shadowBlur || 0;
+			this.shadowOffsetX = offsetX || 0;
+			this.shadowOffsetY = offsetY || 0;
 		},
-		shadowStyle : {
-			value : function(color, blur, offsetX, offsetY){
-				if (!color){
-					this.shadowBlur = 0;
-					return;
-				}
+		drawRect : function(x, y, w, h){
+			this.primitives.add({
+				type : "rect",
+				x : x,
+				y : y,
+				w : w,
+				h : h,
+				fillColor : this.fillColor,
+				fillAlpha : this.fillAlpha,
+				lineColor : this.lineColor,
+				lineAlpha : this.lineAlpha,
+				lineWidth : this.lineWidth,
+				shadowColor : this.shadowColor,
+				shadowBlur : this.shadowBlur,
+				shadowOffsetX : this.shadowOffsetX,
+				shadowOffsetY : this.shadowOffsetY
+			});
 
-				this.shadowColor = color || this.shadowColor || "#000000";
-				this.shadowBlur = blur || this.shadowBlur || 0;
-				this.shadowOffsetX = offsetX || 0;
-				this.shadowOffsetY = offsetY || 0;
-			},
-			writable : true,
-			configurable : true
+			return this;
 		},
-		drawRect : {
-			value : function(x, y, w, h){
-				this.primitives.add({
-					type : "rect",
-					x : x,
-					y : y,
-					w : w,
-					h : h,
-					fillColor : this.fillColor,
-					fillAlpha : this.fillAlpha,
-					lineColor : this.lineColor,
-					lineAlpha : this.lineAlpha,
-					lineWidth : this.lineWidth,
-					shadowColor : this.shadowColor,
-					shadowBlur : this.shadowBlur,
-					shadowOffsetX : this.shadowOffsetX,
-					shadowOffsetY : this.shadowOffsetY
-				});
+		drawCircle : function(x, y, radius){
+			this.primitives.add({
+				type : "circle",
+				x : x,
+				y : y,
+				radius : radius,
+				fillColor : this.fillColor,
+				fillAlpha : this.fillAlpha,
+				lineColor : this.lineColor,
+				lineAlpha : this.lineAlpha,
+				lineWidth : this.lineWidth,
+				shadowColor : this.shadowColor,
+				shadowBlur : this.shadowBlur,
+				shadowOffsetX : this.shadowOffsetX,
+				shadowOffsetY : this.shadowOffsetY
+			});
 
-				return this;
-			},
+			return this;
 		},
-		drawCircle : {
-			value : function(x, y, radius){
-				this.primitives.add({
-					type : "circle",
-					x : x,
-					y : y,
-					radius : radius,
-					fillColor : this.fillColor,
-					fillAlpha : this.fillAlpha,
-					lineColor : this.lineColor,
-					lineAlpha : this.lineAlpha,
-					lineWidth : this.lineWidth,
-					shadowColor : this.shadowColor,
-					shadowBlur : this.shadowBlur,
-					shadowOffsetX : this.shadowOffsetX,
-					shadowOffsetY : this.shadowOffsetY
-				});
+		drawArc : function(x, y, radius, startAngle, endAngle){
+			this.primitives.add({
+				type : "arc",
+				x : x,
+				y : y,
+				radius : radius,
+				startAngle : startAngle, 
+				endAngle : endAngle,
+				fillColor : this.fillColor,
+				fillAlpha : this.fillAlpha,
+				lineColor : this.lineColor,
+				lineAlpha : this.lineAlpha,
+				lineWidth : this.lineWidth
+			});
 
-				return this;
-			},
+			return this;
 		},
-		drawArc : {
-			value : function(x, y, radius, startAngle, endAngle){
-				this.primitives.add({
-					type : "arc",
-					x : x,
-					y : y,
-					radius : radius,
-					startAngle : startAngle, 
-					endAngle : endAngle,
-					fillColor : this.fillColor,
-					fillAlpha : this.fillAlpha,
-					lineColor : this.lineColor,
-					lineAlpha : this.lineAlpha,
-					lineWidth : this.lineWidth
-				});
+		drawPolygon : function(path){
+			this.primitives.add({
+				type : "polygon",
+				path : path,
+				fillColor : this.fillColor,
+				fillAlpha : this.fillAlpha,
+				lineColor : this.lineColor,
+				lineAlpha : this.lineAlpha,
+				lineWidth : this.lineWidth,
+				shadowColor : this.shadowColor,
+				shadowColor : this.shadowColor,
+				shadowBlur : this.shadowBlur,
+				shadowOffsetX : this.shadowOffsetX,
+				shadowOffsetY : this.shadowOffsetY
+			})
+		},
+		closePath : function(){
+			this.activePath = null;
+		},
+		beginFill : function(color, alpha){
+			this.fillAlpha = alpha;
+			this.fillColor = color;
 
-				return this;
-			},
-		},
-		drawPolygon : {
-			value : function(path){
-				this.primitives.add({
-					type : "polygon",
-					path : path,
-					fillColor : this.fillColor,
-					fillAlpha : this.fillAlpha,
-					lineColor : this.lineColor,
-					lineAlpha : this.lineAlpha,
-					lineWidth : this.lineWidth,
-					shadowColor : this.shadowColor,
-					shadowColor : this.shadowColor,
-					shadowBlur : this.shadowBlur,
-					shadowOffsetX : this.shadowOffsetX,
-					shadowOffsetY : this.shadowOffsetY
-				})
-			}
-		},
-		closePath : {
-			value : function(){
-				this.activePath = null;
-			}
-		},
-		beginFill : {
-			value : function(color, alpha){
-				this.fillAlpha = alpha;
-				this.fillColor = color;
-
-				return this;
-			},
-			writable : true,
-			configurable : true
+			return this;
 		},	
-		endFill : {
-			value : function(){
+		endFill : function(){
 
 
-				return this;
-			}
+			return this;
 		},
-		clear : {
-			value : function(){
-				this.primitives.clear();
-				this.activePath = null;
+		clear : function(){
+			this.primitives.clear();
+			this.activePath = null;
 
-				return this;
-			}
+			return this;
 		},
-		renderPolygon : {
-			value : function(data, context, dx, dy, dsx, dsy){
-				var path = data.path;
+		renderPolygon : function(data, context, dx, dy, dsx, dsy){
+			var path = data.path;
 
-				context.beginPath();
-				context.moveTo((path[0] + dx) * dsx, (path[1] + dy) * dsy);
+			context.beginPath();
+			context.moveTo((path[0] + dx) * dsx, (path[1] + dy) * dsy);
 
-				for (var a = 2, l = path.length, x, y; a < l; a++){
-					if (a % 2 == 0){
-						x = (path[a] + dx) * dsx;
-						continue;
-					} else {
-						y = (path[a] + dy) * dsy;
-						context.lineTo(x, y);
-					}
+			for (var a = 2, l = path.length, x, y; a < l; a++){
+				if (a % 2 == 0){
+					x = (path[a] + dx) * dsx;
+					continue;
+				} else {
+					y = (path[a] + dy) * dsy;
+					context.lineTo(x, y);
 				}
-
-				context.strokeStyle = data.lineColor.valueOf();
-				context.globalAlpha = data.lineAlpha;
-				context.lineWidth = data.lineWidth;
-				context.lineJoin = data.lineJoin;
-				context.lineCap = data.lineCap;
-				context.closePath();
-
-				context.shadowColor = (data.shadowColor || "#000000").valueOf();
-				context.shadowBlur = data.shadowBlur || 0;
-				context.shadowOffsetX = data.shadowOffsetX || 0;
-				context.shadowOffsetY = data.shadowOffsetY || 0;
-
-				context.stroke();
-
-				// if (data.fillColor.stopColors){
-
-				// 	console.log(data.fillColor.valueOf());
-				// 	debugger;
-				// }
-
-				context.fillStyle = data.fillColor.valueOf();
-				context.globalAlpha = data.fillAlpha;
-				context.fill();
-
 			}
+
+			context.strokeStyle = data.lineColor.valueOf();
+			context.globalAlpha = data.lineAlpha;
+			context.lineWidth = data.lineWidth;
+			context.lineJoin = data.lineJoin;
+			context.lineCap = data.lineCap;
+			context.closePath();
+
+			context.shadowColor = (data.shadowColor || "#000000").valueOf();
+			context.shadowBlur = data.shadowBlur || 0;
+			context.shadowOffsetX = data.shadowOffsetX || 0;
+			context.shadowOffsetY = data.shadowOffsetY || 0;
+
+			context.stroke();
+
+			// if (data.fillColor.stopColors){
+
+			// 	console.log(data.fillColor.valueOf());
+			// 	debugger;
+			// }
+
+			context.fillStyle = data.fillColor.valueOf();
+			context.globalAlpha = data.fillAlpha;
+			context.fill();
+
 		},
-		renderPath : {
-			value : function(data, context, dx, dy, dsx, dsy){
-				var path = data.path;
+		renderPath : function(data, context, dx, dy, dsx, dsy){
+			var path = data.path;
 
-				context.beginPath();
-				context.moveTo((path[0] + dx) * dsx, (path[1] + dy) * dsy);
+			context.beginPath();
+			context.moveTo((path[0] + dx) * dsx, (path[1] + dy) * dsy);
 
-				for (var a = 2, l = path.length, x, y; a < l; a++){
-					if (a % 2 == 0){
-						x = (path[a] + dx) * dsx;
-						continue;
-					} else {
-						y = (path[a] + dy) * dsy;
-						context.lineTo(x, y);
-					}
+			for (var a = 2, l = path.length, x, y; a < l; a++){
+				if (a % 2 == 0){
+					x = (path[a] + dx) * dsx;
+					continue;
+				} else {
+					y = (path[a] + dy) * dsy;
+					context.lineTo(x, y);
 				}
-
-				context.strokeStyle = data.lineColor.valueOf();
-				context.globalAlpha = data.lineAlpha;
-				context.lineWidth = data.lineWidth;
-				context.lineJoin = data.lineJoin;
-				context.lineCap = data.lineCap;
-				context.shadowColor = (data.shadowColor || "#000000").valueOf();
-				context.shadowBlur = data.shadowBlur || 0;
-				context.shadowOffsetX = data.shadowOffsetX || 0;
-				context.shadowOffsetY = data.shadowOffsetY || 0;
-				context.stroke();
-
-				return this;
-
 			}
+
+			context.strokeStyle = data.lineColor.valueOf();
+			context.globalAlpha = data.lineAlpha;
+			context.lineWidth = data.lineWidth;
+			context.lineJoin = data.lineJoin;
+			context.lineCap = data.lineCap;
+			context.shadowColor = (data.shadowColor || "#000000").valueOf();
+			context.shadowBlur = data.shadowBlur || 0;
+			context.shadowOffsetX = data.shadowOffsetX || 0;
+			context.shadowOffsetY = data.shadowOffsetY || 0;
+			context.stroke();
+
+			return this;
+
 		},
-		render : {
-			value : function(parent, context, dx, dy, dsx, dsy){
-				if (!this.visible){
-					return;
-				}
+		render : function(parent, context, dx, dy, dsx, dsy){
+			if (!this.visible){
+				return;
+			}
 
-				dx += this.x;
-				dy += this.y;
+			dx += this.x;
+			dy += this.y;
 
-				dsx *= this.scale.x;
-				dsy *= this.scale.y;
+			dsx *= this.scale.x;
+			dsy *= this.scale.y;
 
-				var sw = 0, sh = 0;
+			var sw = 0, sh = 0;
 
-				this.calculated.position.x = this.position.x;
-				this.calculated.position.y = this.position.y;
+			this.calculated.position.x = this.position.x;
+			this.calculated.position.y = this.position.y;
 
-				// context.shadowColor = "#000000";
-				// context.shadowBlur =  0;
-				// context.shadowOffsetX = 0;
-				// context.shadowOffsetY = 0;
+			// context.shadowColor = "#000000";
+			// context.shadowBlur =  0;
+			// context.shadowOffsetX = 0;
+			// context.shadowOffsetY = 0;
 
 
-				this.primitives.iterate(function(current, index){
-					switch(current.type){
-						case "path":
-							this.renderPath(current, context, dx, dy, dsx, dsy);
-						break;
-						case "polygon":
-							this.renderPolygon(current, context, dx, dy, dsx, dsy);
-						break;
-						case "rect":
-							context.beginPath();
+			this.primitives.iterate(function(current, index){
+				switch(current.type){
+					case "path":
+						this.renderPath(current, context, dx, dy, dsx, dsy);
+					break;
+					case "polygon":
+						this.renderPolygon(current, context, dx, dy, dsx, dsy);
+					break;
+					case "rect":
+						context.beginPath();
+						context.globalAlpha = current.lineAlpha || 1;
+
+						context.shadowColor = (current.shadowColor || "#000000").valueOf();
+						context.shadowBlur = current.shadowBlur || 0;
+						context.shadowOffsetX = current.shadowOffsetX || 0;
+						context.shadowOffsetY = current.shadowOffsetY || 0;
+
+						context.rect((dx + current.x) * dsx, (dy + current.y) * dsy, current.w * dsx, current.h * dsy);
+						context.fillStyle = current.fillColor.valueOf();
+						context.globalAlpha = current.fillAlpha || 1;
+						context.fillRect((dx + current.x) * dsx, (dy + current.y) * dsy, current.w * dsx, current.h * dsy);
+
+						if (current.lineWidth){
+							context.lineWidth = current.lineWidth || 0;
+							context.globalAlpha = current.lineAlpha;
+							context.strokeStyle = current.lineColor.valueOf();
+							context.stroke();
+						}
+
+						
+
+						if ((dx + current.x) * dsx + current.w * dsx > sw) sw = (dx + current.x) * dsx + current.w * dsx;
+						if ((dy + current.y) * dsy + current.h * dsy > sh) sh = (dy + current.y) * dsy + current.h * dsy;
+
+					break;
+					case "circle":
+						context.shadowColor = (current.shadowColor || "#000000").valueOf();
+						context.shadowBlur = current.shadowBlur || 0;
+						context.shadowOffsetX = current.shadowOffsetX || 0;
+						context.shadowOffsetY = current.shadowOffsetY || 0;
+
+					  	context.save();
+						context.beginPath();
+						context.translate((dx + current.x) * dsx, (dy + current.y) * dsy);
+						context.scale(dsx, dsy);
+						context.arc(0, 0, current.radius, 0, 2 * Math.PI, false);
+						context.restore();
+						context.fillStyle = current.fillColor.valueOf();
+						context.globalAlpha = current.fillAlpha || 1;
+						context.fill();
+
+						if (current.lineWidth){
+							context.lineWidth = current.lineWidth || 0;
 							context.globalAlpha = current.lineAlpha || 1;
+							context.strokeStyle = current.lineColor.valueOf();
+							context.stroke();
+						}
 
-							context.shadowColor = (current.shadowColor || "#000000").valueOf();
-							context.shadowBlur = current.shadowBlur || 0;
-							context.shadowOffsetX = current.shadowOffsetX || 0;
-							context.shadowOffsetY = current.shadowOffsetY || 0;
+						
 
-							context.rect((dx + current.x) * dsx, (dy + current.y) * dsy, current.w * dsx, current.h * dsy);
-							context.fillStyle = current.fillColor.valueOf();
-							context.globalAlpha = current.fillAlpha || 1;
-							context.fillRect((dx + current.x) * dsx, (dy + current.y) * dsy, current.w * dsx, current.h * dsy);
+						if ((current.x) + current.radius * 2 > sw) sw = (current.x) + (current.radius * 2);
+						if ((current.y) + current.radius * 2 > sh) sh = (current.y) + (current.radius * 2);
 
-							if (current.lineWidth){
-								context.lineWidth = current.lineWidth || 0;
-								context.globalAlpha = current.lineAlpha;
-								context.strokeStyle = current.lineColor.valueOf();
-								context.stroke();
+						if (current.x < current.radius){
+							if (this.x + current.x - current.radius < this.calculated.position.x) {
+								this.calculated.position.x = this.x + (current.x - current.radius)
 							}
+						}
 
-							
-
-							if ((dx + current.x) * dsx + current.w * dsx > sw) sw = (dx + current.x) * dsx + current.w * dsx;
-							if ((dy + current.y) * dsy + current.h * dsy > sh) sh = (dy + current.y) * dsy + current.h * dsy;
-
-						break;
-						case "circle":
-							context.shadowColor = (current.shadowColor || "#000000").valueOf();
-							context.shadowBlur = current.shadowBlur || 0;
-							context.shadowOffsetX = current.shadowOffsetX || 0;
-							context.shadowOffsetY = current.shadowOffsetY || 0;
-
-						  	context.save();
-							context.beginPath();
-							context.translate((dx + current.x) * dsx, (dy + current.y) * dsy);
-							context.scale(dsx, dsy);
-							context.arc(0, 0, current.radius, 0, 2 * Math.PI, false);
-							context.restore();
-							context.fillStyle = current.fillColor.valueOf();
-							context.globalAlpha = current.fillAlpha || 1;
-							context.fill();
-
-							if (current.lineWidth){
-								context.lineWidth = current.lineWidth || 0;
-								context.globalAlpha = current.lineAlpha || 1;
-								context.strokeStyle = current.lineColor.valueOf();
-								context.stroke();
+						if (current.y < current.radius){
+							if (this.y + current.y - current.radius < this.calculated.position.y) {
+								this.calculated.position.y = this.y + (current.y - current.radius)
 							}
+						}
 
-							
+					break;
+					case "arc":
+						context.shadowColor = (current.shadowColor || "#000000").valueOf();
+						context.shadowBlur = current.shadowBlur || 0;
+						context.shadowOffsetX = current.shadowOffsetX || 0;
+						context.shadowOffsetY = current.shadowOffsetY || 0;
 
-							if ((current.x) + current.radius * 2 > sw) sw = (current.x) + (current.radius * 2);
-							if ((current.y) + current.radius * 2 > sh) sh = (current.y) + (current.radius * 2);
+					  	context.save();
+						context.beginPath();
+						context.translate((dx + current.x) * dsx, (dy + current.y) * dsy);
+						context.scale(dsx, dsy);
 
-							if (current.x < current.radius){
-								if (this.x + current.x - current.radius < this.calculated.position.x) {
-									this.calculated.position.x = this.x + (current.x - current.radius)
-								}
+
+						context.arc(0, 0, current.radius, current.startAngle, current.endAngle);
+						context.restore();
+						context.fillStyle = current.fillColor.valueOf();
+						context.globalAlpha = current.fillAlpha || 1;
+						context.fill();
+
+						if (current.lineWidth){
+							context.lineWidth = current.lineWidth || 0;
+							context.globalAlpha = current.lineAlpha || 1;
+							context.strokeStyle = current.lineColor.valueOf();
+							context.stroke();
+						}
+
+						
+
+						if ((current.x) + current.radius * 2 > sw) sw = (current.x) + (current.radius * 2);
+						if ((current.y) + current.radius * 2 > sh) sh = (current.y) + (current.radius * 2);
+
+						if (current.x < current.radius){
+							if (this.x + current.x - current.radius < this.calculated.position.x) {
+								this.calculated.position.x = this.x + (current.x - current.radius)
 							}
+						}
 
-							if (current.y < current.radius){
-								if (this.y + current.y - current.radius < this.calculated.position.y) {
-									this.calculated.position.y = this.y + (current.y - current.radius)
-								}
+						if (current.y < current.radius){
+							if (this.y + current.y - current.radius < this.calculated.position.y) {
+								this.calculated.position.y = this.y + (current.y - current.radius)
 							}
+						}
 
-						break;
-						case "arc":
-							context.shadowColor = (current.shadowColor || "#000000").valueOf();
-							context.shadowBlur = current.shadowBlur || 0;
-							context.shadowOffsetX = current.shadowOffsetX || 0;
-							context.shadowOffsetY = current.shadowOffsetY || 0;
+					break;
+				}
 
-						  	context.save();
-							context.beginPath();
-							context.translate((dx + current.x) * dsx, (dy + current.y) * dsy);
-							context.scale(dsx, dsy);
+				this.size._x = sw;
+				this.size._y = sh;
+
+			}, this);
 
 
-							context.arc(0, 0, current.radius, current.startAngle, current.endAngle);
-							context.restore();
-							context.fillStyle = current.fillColor.valueOf();
-							context.globalAlpha = current.fillAlpha || 1;
-							context.fill();
-
-							if (current.lineWidth){
-								context.lineWidth = current.lineWidth || 0;
-								context.globalAlpha = current.lineAlpha || 1;
-								context.strokeStyle = current.lineColor.valueOf();
-								context.stroke();
-							}
-
-							
-
-							if ((current.x) + current.radius * 2 > sw) sw = (current.x) + (current.radius * 2);
-							if ((current.y) + current.radius * 2 > sh) sh = (current.y) + (current.radius * 2);
-
-							if (current.x < current.radius){
-								if (this.x + current.x - current.radius < this.calculated.position.x) {
-									this.calculated.position.x = this.x + (current.x - current.radius)
-								}
-							}
-
-							if (current.y < current.radius){
-								if (this.y + current.y - current.radius < this.calculated.position.y) {
-									this.calculated.position.y = this.y + (current.y - current.radius)
-								}
-							}
-
-						break;
-					}
-
-					this.size._x = sw;
-					this.size._y = sh;
-
-				}, this);
+			// this.drawDebug(context);
 
 
-				// this.drawDebug(context);
-
-
-			}
 		}
 	}, "Graphics");
 
@@ -1524,22 +1296,20 @@ define(function(){
 			this.classes.add("text-node");
 
 		},
-		setup : {
-			value :function(data){
-				this.super("setup", data);
+		setup : function(data){
+			this.super("setup", data);
 
-				var styles = {};
+			var styles = {};
 
-				if (data.fontsize) styles.fontSize = data.fontsize;
-				if (data.fontfamily) styles.fontFamily = data.fontfamily;
-				if (data.color) styles.color = data.color;
-				if (data.textalign) styles.textAlign = data.textalign;
+			if (data.fontsize) styles.fontSize = data.fontsize;
+			if (data.fontfamily) styles.fontFamily = data.fontfamily;
+			if (data.color) styles.color = data.color;
+			if (data.textalign) styles.textAlign = data.textalign;
 
-				if (data.value) this.text = data.value;
+			if (data.value) this.text = data.value;
 
-				this.styles = styles;
+			this.styles = styles;
 
-			}
 		},
 		type : {
 			get : function(){
@@ -1566,23 +1336,21 @@ define(function(){
 				this._text = text;
 			}
 		},	
-		render : {
-			value : function(parent, context, dx, dy, dsx, dsy){
-				if (!this.visible){
-					return;
-				}
-
-				dx += this.x;
-				dy += this.y;
-
-				dsx *= this.scale.x;
-				dsy *= this.scale.y;
-
-				context.font = this.styles.fontSize + " " + this.styles.fontFamily;
-				context.fillStyle = this.styles.color.valueOf();
-				context.textAlign = this.styles.textAlign;
-				context.fillText(this.text, dx * dsx, dy * dsy);
+		render : function(parent, context, dx, dy, dsx, dsy){
+			if (!this.visible){
+				return;
 			}
+
+			dx += this.x;
+			dy += this.y;
+
+			dsx *= this.scale.x;
+			dsy *= this.scale.y;
+
+			context.font = this.styles.fontSize + " " + this.styles.fontFamily;
+			context.fillStyle = this.styles.color.valueOf();
+			context.textAlign = this.styles.textAlign;
+			context.fillText(this.text, dx * dsx, dy * dsy);
 		}
 	}, "Text");
 
@@ -1607,10 +1375,9 @@ define(function(){
 
 			this.Gradient = Gradient;
 
-		},
-		sceneBuilder : {
-			value : new SceneBuilder(),
-			static : true
+			// instances[this.id] = this;
+			this.__instances = instances;
+
 		},
 		Texture : {
 			value : Texture
@@ -1658,125 +1425,120 @@ define(function(){
 				return this._events;
 			}
 		},
-		setupInteractivity : {
-			value : function(element){
-				if (this.interactionElement){
-					clearInterval(this.interactionElement.customEventCheckingID);
-					delete this.interactionElement;
-				}
-
-
-				element = element || this.canvas;
-
-				if (!element){
-					return;
-				}
-
-				var events = this.events;
-				
-				for (var k in events){
-					window.element = element;
-					element.addEventListener(k, this._onUserEvent);
-				}
-
-				element.testEvent = new Event("mousemove");
-				this.interactionElement = element;
-
+		setupInteractivity : function(element){
+			if (this.interactionElement){
+				clearInterval(this.interactionElement.customEventCheckingID);
+				delete this.interactionElement;
 			}
+
+
+			element = element || this.canvas;
+
+			if (!element){
+				return;
+			}
+
+			var events = this.events;
+			
+			for (var k in events){
+				window.element = element;
+				element.addEventListener(k, this._onUserEvent);
+			}
+
+			element.testEvent = new Event("mousemove");
+			this.interactionElement = element;
+
 		},
-		_onUserEvent : {
-			value : function(evt){
-				if (evt.type == "mousemove"){
-					IS_TOUCH_DEVICE = false;
+		_onUserEvent : function(evt){
+			if (evt.type == "mousemove"){
+				IS_TOUCH_DEVICE = false;
+			}
+
+
+			var isTouchEvent = ("TouchEvent" in window && evt instanceof TouchEvent);
+
+			if (isTouchEvent){
+				IS_TOUCH_DEVICE = true;
+			}
+
+			if (IS_TOUCH_DEVICE && !isTouchEvent){
+				return;
+			}
+
+			var touchCount = 0;
+			var eventType = this.events[evt.type];
+			var bounds = this.interactionElement.getBoundingClientRect();
+			var x, y;
+
+			evt.isTouchEvent = isTouchEvent;
+
+			if (isTouchEvent){
+				touchCount = evt.touches.length;
+				evt.touchCount = touchCount;
+
+				if (touchCount == 1){
+					x = tools.transCoord((evt.touches[0].pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
+					y = tools.transCoord((evt.touches[0].pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
+				} else if (touchCount == 2){
+
+					evt.touch1X = tools.transCoord((evt.touches[0].pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
+					evt.touch1Y = tools.transCoord((evt.touches[0].pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
+
+					evt.touch2X = tools.transCoord((evt.touches[1].pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
+					evt.touch2Y = tools.transCoord((evt.touches[1].pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
+
+					x = (evt.touch1X + evt.touch2X) / 2;
+					y = (evt.touch1Y + evt.touch2Y) / 2;
+
+					eventType = "panning";
 				}
 
-
-				var isTouchEvent = ("TouchEvent" in window && evt instanceof TouchEvent);
-
-				if (isTouchEvent){
-					IS_TOUCH_DEVICE = true;
+				if (touchCount <= 0){
+					x = this.pointerPosition.x;
+					y = this.pointerPosition.y;
 				}
 
-				if (IS_TOUCH_DEVICE && !isTouchEvent){
+				if (eventType == "pointerdown"){
+					this.prevPointerDownTime = +new Date();
+				}
+
+				if (eventType == "pointerup"){
+					if (+new Date() - this.prevPointerDownTime < 250){
+						eventType = "pointertap";
+					}
+				}
+
+			} else {
+				x = tools.transCoord((evt.pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
+				y = tools.transCoord((evt.pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
+			}
+
+
+			this.pointerPosition.x = x;
+			this.pointerPosition.y = y;
+
+			if (eventType == "mousewheel"){
+				if (typeof evt.detail == "number" && typeof evt.wheelDeltaX == "undefined"){
+					evt.wheelDeltaY = -1 * evt.detail;
+				}
+				evt.preventDefault();
+			}
+
+
+			if (eventType == "pointermove" || eventType == "mousewheel" || eventType == "panning"){
+
+				if (+new Date() - this.prevPointerEventTime < (this.interactionFreq || 10)){
 					return;
-				}
+				} 
 
-				var touchCount = 0;
-				var eventType = this.events[evt.type];
-				var bounds = this.interactionElement.getBoundingClientRect();
-				var x, y;
+				this.prevPointerEventTime = +new Date();
 
-				evt.isTouchEvent = isTouchEvent;
+				this.interactionElement.testEvent = evt
+			};
 
-				if (isTouchEvent){
-					touchCount = evt.touches.length;
-					evt.touchCount = touchCount;
+			if (this.interactive) this.processInteractivity(eventType, x, y, this.canvas, evt, this.calculated.position.x, this.calculated.position.y);
 
-					if (touchCount == 1){
-						x = tools.transCoord((evt.touches[0].pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
-						y = tools.transCoord((evt.touches[0].pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
-					} else if (touchCount == 2){
-
-						evt.touch1X = tools.transCoord((evt.touches[0].pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
-						evt.touch1Y = tools.transCoord((evt.touches[0].pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
-
-						evt.touch2X = tools.transCoord((evt.touches[1].pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
-						evt.touch2Y = tools.transCoord((evt.touches[1].pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
-
-						x = (evt.touch1X + evt.touch2X) / 2;
-						y = (evt.touch1Y + evt.touch2Y) / 2;
-
-						eventType = "panning";
-					}
-
-					if (touchCount <= 0){
-						x = this.pointerPosition.x;
-						y = this.pointerPosition.y;
-					}
-
-					if (eventType == "pointerdown"){
-						this.prevPointerDownTime = +new Date();
-					}
-
-					if (eventType == "pointerup"){
-						if (+new Date() - this.prevPointerDownTime < 250){
-							eventType = "pointertap";
-						}
-					}
-
-				} else {
-					x = tools.transCoord((evt.pageX - bounds.left), bounds.width, this.canvas.width) / this.scale.x;
-					y = tools.transCoord((evt.pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
-				}
-
-
-				this.pointerPosition.x = x;
-				this.pointerPosition.y = y;
-
-				if (eventType == "mousewheel"){
-					if (typeof evt.detail == "number" && typeof evt.wheelDeltaX == "undefined"){
-						evt.wheelDeltaY = -1 * evt.detail;
-					}
-					evt.preventDefault();
-				}
-
-
-				if (eventType == "pointermove" || eventType == "mousewheel" || eventType == "panning"){
-
-					if (+new Date() - this.prevPointerEventTime < (this.interactionFreq || 10)){
-						return;
-					} 
-
-					this.prevPointerEventTime = +new Date();
-
-					this.interactionElement.testEvent = evt
-				};
-
-				if (this.interactive) this.processInteractivity(eventType, x, y, this.canvas, evt, this.calculated.position.x, this.calculated.position.y);
-
-				this.checkInteractivity(eventType, x, y, this.canvas, evt, 0, 0);
-			},
-			writable : true
+			this.checkInteractivity(eventType, x, y, this.canvas, evt, 0, 0);
 		},
 		resolution : {
 			get : function(){
@@ -1787,53 +1549,45 @@ define(function(){
 				this._resolution = value;
 			}
 		},
-		resize : {
-			value : function(w, h){
-				var  resolution = this.resolution || window.devicePixelRatio || 1;
-				this.scale.set(resolution);
-				this.size.x = w;
-				this.size.y = h;
-				this.canvas.width =  w * resolution;
-				this.canvas.height = h * resolution;
-				this.xCanvas.width = w * resolution;
-				this.xCanvas.height = h * resolution;
+		resize : function(w, h){
+			var  resolution = this.resolution || window.devicePixelRatio || 1;
+			this.scale.set(resolution);
+			this.size.x = w;
+			this.size.y = h;
+			this.canvas.width =  w * resolution;
+			this.canvas.height = h * resolution;
+			this.xCanvas.width = w * resolution;
+			this.xCanvas.height = h * resolution;
 
-				this.ctx.imageSmoothingEnabled = false;
-				this.xCtx.imageSmoothingEnabled = false;
-			}
+			this.ctx.imageSmoothingEnabled = false;
+			this.xCtx.imageSmoothingEnabled = false;
 		},
-		resizeToFitParent : {
-			value : function(){
-				var parent = this.canvas.parentNode;
+		resizeToFitParent : function(){
+			var parent = this.canvas.parentNode;
 
-				if (parent){
-					this.resize(parent.clientWidth || this.canvas.width || 1, parent.clientHeight || this.canvas.height || 1);
-				}
-
+			if (parent){
+				this.resize(parent.clientWidth || this.canvas.width || 1, parent.clientHeight || this.canvas.height || 1);
 			}
+
 		},
 		fps : {
 			get : function(){
 				return this._fps;
 			},
 		},
-		render : {
-			value : function(absDelta, relDelta){
-				this._fps = (this._fps + 60 / relDelta) / 2; 
+		render : function(absDelta, relDelta){
+			this._fps = (this._fps + 60 / relDelta) / 2; 
 
-				this.xCtx.clearRect(0, 0, this.xCanvas.width, this.xCanvas.height);
-				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-				this.prerender(this.ctx);
-				//this.ctx.drawImage(this.xCanvas, 0, 0);
-			}
+			this.xCtx.clearRect(0, 0, this.xCanvas.width, this.xCanvas.height);
+			this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+			this.prerender(this.ctx);
+			//this.ctx.drawImage(this.xCanvas, 0, 0);
 		},
 		
-		prerender : {
-			value : function(context){
-				this.children.iterate(function(child, index){
-					child.render(this, context, this.position.x, this.position.y, this.scale.x, this.scale.y);
-				}, this);
-			}
+		prerender : function(context){
+			this.children.iterate(function(child, index){
+				child.render(this, context, this.position.x, this.position.y, this.scale.x, this.scale.y);
+			}, this);
 		}
 	}, "Pixton");
 
@@ -1847,6 +1601,7 @@ define(function(){
 	Pixton.Text = Text;
 	Pixton.TokensCollection = TokensCollection;
 	Pixton.TokensList = TokensList;
+	Pixton.__instances = instances;
 
 	return Pixton;
 
