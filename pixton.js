@@ -100,9 +100,9 @@ define(function(){
 
 			Object.defineProperties(CLASS.prototype, mergedPrototype);
 
-			for (var k in prototype){
-				if (prototype[k].static){
-					CLASS[k] = CLASS.prototype[k];
+			for (var k in mergedPrototype){
+				if (mergedPrototype[k].static){
+					Object.defineProperty(CLASS, k, mergedPrototype[k]);
 				}
 			}
 
@@ -129,7 +129,7 @@ define(function(){
 
 			for (var k in prototype){
 				if (prototype[k].static){
-					CLASS[k] = CLASS.prototype[k];
+					Object.defineProperty(CLASS, k, prototype[k]);
 				}
 			}
 
@@ -146,16 +146,26 @@ define(function(){
 		transCoord : function(coord, srcResolution, targetResolution){
 			return coord * (targetResolution / srcResolution);
 		},
-		calcOffsetX : function(){
-
-		},
-		calcOffsetY : function(){
-			
-		},
 		distancePoints2 : function(x0, y0, x1, y1){
 			return Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
 		},
+		html2dom : function(html){
+			var temp = document.createElement("div");
+			temp.innerHTML = html;
+			var result = temp.children[0];
+			temp.remove();
+			return result;
+		},
+		dom2html : function(dom){
+			var cloned = dom.cloneNode(true);
+			var temp = document.createElement("div");
+			temp.appendChild(cloned);
+			var result = temp.innerHTML;
+			temp.remove();
+			return result;
+		}
 	};
+
 	var tools = new Tools;
 
 
@@ -239,14 +249,14 @@ define(function(){
 		},
 		getOffset : function(token){
 			return token;
-		}
+		},
 	}, "Pixton_Gradient");
 
 
-	/**DomProxy
+	/**DOMNode
 	  */
 
-	var DOMProxyNodeInterface = tools.CLASS((function(){
+	var DOMNodeInterface = tools.CLASS((function(){
 		var prototype = {};
 		var props = [
 			"classList",
@@ -267,26 +277,11 @@ define(function(){
 
 		return prototype;
 
-	}()), "Pixton_DOMProxyNodeInterface");
+	}()), "Pixton_DOMNodeInterface");
 
-	var DOMProxy = tools.extendCLASS(DOMProxyNodeInterface, {
+	var DOMNode = tools.extendCLASS(DOMNodeInterface, {
 		constructor : function(){
 			this.dom = document.createElement(this.type);
-		},
-		sync : function(){
-			if (this.parent){
-				this.dom.pixtonNode = this;
-				this.parent.appendChild(this);
-				this.dom.setAttribute(":id", this.id);
-				this.dom.setAttribute(":type", this.type);
-				this.dom.setAttribute("x", this.x);
-				this.dom.setAttribute("y", this.y);
-				this.dom.setAttribute("scale-x", this.scale.x);
-				this.dom.setAttribute("scale-y", this.scale.y);
-				this.dom.setAttribute("visible", this.visible);
-				this.dom.setAttribute("interactive", this.interactive);
-				this.dom.setAttribute("button-mode", this.buttonMode);
-			}
 		},
 		$cache : {
 			get : function(){
@@ -296,13 +291,81 @@ define(function(){
 				return this.__$cache;
 			}
 		},
+		setDOMElement : function(element){
+			this.dom = element;
+			this.sync(false);
+		},
+		sync : function(syncDOM){
+			if (syncDOM){
+				this.dom.pixtonNode = this;
+
+				if (this.parent){
+					this.parent.appendChild(this);
+				} 
+
+				this.dom.setAttribute(":id", this.id);
+				this.dom.setAttribute("x", this.x);
+				this.dom.setAttribute("y", this.y);
+				this.dom.setAttribute("scale-x", this.scale.x);
+				this.dom.setAttribute("scale-y", this.scale.y);
+				this.dom.setAttribute("visible", this.visible);
+				this.dom.setAttribute("interactive", this.interactive);
+				this.dom.setAttribute("button-mode", this.buttonMode);
+				
+				if (this.type == "text"){
+					this.dom.setAttribute("text", this.text || "");
+					this.dom.setAttribute("text-color", this.styles.color);
+					this.dom.setAttribute("text-font-family", this.styles.fontFamily);
+					this.dom.setAttribute("text-font-size", this.styles.fontSize);
+					this.dom.setAttribute("text-align", this.styles.textAlign);
+				}
+
+			} else {
+				this.x = Number(this.dom.getAttribute("x") || 0);
+				this.y = Number(this.dom.getAttribute("y") || 0);
+				this.scale.x = Number(this.dom.getAttribute("scale-x") || 1);
+				this.scale.y = Number(this.dom.getAttribute("scale-y") || 1);
+				this.visible = JSON.parse(this.dom.getAttribute("visible") || true);
+				this.interactive = JSON.parse(this.dom.getAttribute("interactive") || false);
+				this.buttonMode = JSON.parse(this.dom.getAttribute("buttonMode") || false);
+				
+				if (this.type == "text"){
+					if (this.dom.hasAttribute("text")) this.text = this.dom.getAttribute("text");
+					if (this.dom.hasAttribute("text-color")) this.styles.color = this.dom.getAttribute("text-color");
+					if (this.dom.hasAttribute("text-font-family")) this.styles.fontFamily = this.dom.getAttribute("text-font-family");
+					if (this.dom.hasAttribute("text-font-size")) this.styles.fontSize = this.dom.getAttribute("text-font-size");
+					if (this.dom.hasAttribute("text-align")) this.styles.textAlign = this.dom.getAttribute("text-align");
+				}
+
+				for (var a = 0, l = this.dom.children.length; a < l; a++){
+					if (this.dom.children[a].getAttribute(":id") == null){
+						let newChild = Pixton.createElement(this.dom.children[a].tagName.toLowerCase());
+						newChild.setDOMElement(this.dom.children[a]);
+						this.addChild(newChild);
+					}
+				}
+
+			}
+		},
+		fromHTML : function(data){
+			if (typeof data == "string"){
+				data = tools.html2dom(data);
+			}
+
+			this.dom.appendChild(data);
+			this.syncBranch(false);
+
+		},
+		toHTML : function(){
+			return tools.dom2html(this.dom);
+		},
 		select : function(selector, noCache, iteratee, context){
 			var result = null;
 			var temp;
 
 			if (typeof noCache == "function"){
-				context = iterate;
-				iterate = noCache;
+				context = iteratee;
+				iteratee = noCache;
 				noCache = false;
 			}
 
@@ -321,25 +384,26 @@ define(function(){
 				}
 			}
 
-			if (typeof callback == "function"){
+			if (typeof iteratee == "function"){
 				for (var a = 0, l = result.length; a < l; a++){
-					callback.call(context, result[a], a, result);
+					iteratee.call(context, result[a], a, result);
 				}
 			}
 
 			return result;
 
 		},
-		syncBranch : function(){
+		syncBranch : function(syncDOM){
+			this.sync(syncDOM);
 			this.children.iterate(function(child){
-				child.sync();
-				child.syncBranch();
+				child.sync(syncDOM);
+				child.syncBranch(syncDOM);
 			}, this);
 		},
 		appendChild : function(child){
 			this.dom.appendChild(child.dom);
 		}
-	}, "Pixton_DOMProxy");
+	}, "Pixton_DOMNode");
 
 	/*Tokelist*/
 	var TokensCollection = tools.CLASS({
@@ -486,7 +550,7 @@ define(function(){
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	/*NODE*/
-	var Node = tools.extendCLASS(DOMProxy, {
+	var Node = tools.extendCLASS(DOMNode, {
 		constructor : function(options){
 			options = options || {};
 			this.children = new TokensCollection();
@@ -811,8 +875,8 @@ define(function(){
 			this.children.add(child);
 			child.childIndex = this.children.content.size - 1;
 
-			this.sync();
-			child.sync();
+			this.sync(true);
+			child.sync(true);
 
 			return this;
 		},
@@ -1611,6 +1675,26 @@ define(function(){
 			this.children.iterate(function(child, index){
 				child.render(this, context, this.position.x, this.position.y, this.scale.x, this.scale.y);
 			}, this);
+		},
+		createElement : {
+			value : function(elementType){
+				switch(elementType){
+					case "text":
+						return new Pixton.Text();
+					break;
+					case "graphics":
+						return new Pixton.Graphics();
+					break;
+					case "sprite":
+						return new Pixton.Sprite();
+					break;
+					case "node":
+						return new Pixton.Node();
+					break;
+					default:
+				}
+			},
+			static : true
 		}
 	}, "Pixton");
 
