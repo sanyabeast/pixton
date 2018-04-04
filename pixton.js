@@ -169,7 +169,123 @@ define(function(){
 	var tools = new Tools;
 
 
-	/*DOM Proxy*/
+	/*Tokelist*/
+	var TokensCollection = tools.CLASS({
+		constructor : function(content){
+			this.content = content;
+			if (content) this.content.size = content.length;
+			this.loop = { break : false, continue : false };
+		},
+		content : {
+			get : function(){
+				return this._content;
+			},
+			set : function(content){
+				this._content = content || [];
+			},
+			configurable : true
+		},
+		add : function(value){
+			this.content.push(value);
+			this.content.size = this.content.length;
+			return this.content[this.content.size - 1];
+		},
+		get : function(id){
+			return this.content[id];
+		},
+		remove : function(value){
+			tools.removeFromArrByValue(this.content, value);
+			this.content.size = this.content.length;
+		},
+		removeByIndex : function(index){
+			tools.removeFromArrByIndex(this.content, index);
+			this.content.size = this.content.length;
+		},
+		iterate : function(callback, context){
+			var result;
+			this.loop.break = this.loop.continue = false;
+
+			for (var a = 0; a < this.content.size; a++){
+				if (context){
+					result = callback.call(context, this.content[a], a, this.loop);
+				} else {
+					result = callback(this.content[a], a, this.loop);
+				}
+
+				if (this.loop.break) break;
+			}
+
+			return result;
+
+		},
+		reverseIterate : function(callback, context){
+			var result;
+			this.loop.break = this.loop.continue = false;
+
+			for (var a = this.content.size - 1; a >= 0; a--){
+				if (context){
+					result = callback.call(context, this.content[a], a, this.loop);
+				} else {
+					result = callback(this.content[a], a, this.loop);
+				}
+
+				if (this.loop.break) break;
+			}
+
+			return result;
+
+		},
+		contains : function(value){
+			return this.content.indexOf(value) > -1;
+		},
+		clear : function(){
+			this._content.length = 0;
+			this._content.size = 0;
+		}
+	}, "TokensCollection");
+
+	var TokensList = tools.extendCLASS(TokensCollection, {
+		content : {
+			get : function(){
+				return this._content;
+			},
+			set : function(content){
+				this._content = content || {};
+			}
+		},
+		add : function(name, value){
+			this.content[name] = value;
+			return this.content[name];
+		},
+		remove : function(name){
+			delete this.content[name];
+		},
+		iterate : function(callback, context){
+			var result;
+			this.loop.break = this.loop.continue = false;
+
+			for (var a in this.content){
+				if (context){
+					result = callback.call(context, this.content[a], a, this.loop);
+				} else {
+					result = callback(this.content[a], a, this.loop);
+				}
+
+				if (this.loop.break) break;
+			}
+
+			return result;
+
+		},
+		contains : function(name){
+			return typeof this.content[name] != "undefined";
+		},
+		clear : function(){
+			this.iterate(function(value, name){
+				delete this.content[name];
+			}, this)
+		}
+	}, "TokensList");
 
 
 	/*gradient*/
@@ -258,22 +374,21 @@ define(function(){
 
 	var DOMNodeInterface = tools.CLASS((function(){
 		var prototype = {};
-		var props = [
+		var props = new TokensList([
 			"classList",
 			"attributes",
 			"setAttribute",
 			"getAttribute",
 			"removeAttribute"
-		];
+		]);
 
-		for (var a = 0; a < props.length; a++){
-			let name = props[a];
+		props.iterate(function(name, index){
 			prototype[name] = {
 				get : function(){
 					return this.dom[name];
 				}
 			};
-		}
+		}, this);
 
 		return prototype;
 
@@ -404,124 +519,6 @@ define(function(){
 			this.dom.appendChild(child.dom);
 		}
 	}, "Pixton_DOMNode");
-
-	/*Tokelist*/
-	var TokensCollection = tools.CLASS({
-		constructor : function(content){
-			this.content = content;
-			if (content) this.content.size = content.length;
-			this.loop = { break : false, continue : false };
-		},
-		content : {
-			get : function(){
-				return this._content;
-			},
-			set : function(content){
-				this._content = content || [];
-			},
-			configurable : true
-		},
-		add : function(value){
-			this.content.push(value);
-			this.content.size = this.content.length;
-			return this.content[this.content.size - 1];
-		},
-		get : function(id){
-			return this.content[id];
-		},
-		remove : function(value){
-			tools.removeFromArrByValue(this.content, value);
-			this.content.size = this.content.length;
-		},
-		removeByIndex : function(index){
-			tools.removeFromArrByIndex(this.content, index);
-			this.content.size = this.content.length;
-		},
-		iterate : function(callback, context){
-			var result;
-			this.loop.break = this.loop.continue = false;
-
-			for (var a = 0; a < this.content.size; a++){
-				if (context){
-					result = callback.call(context, this.content[a], a, this.loop);
-				} else {
-					result = callback(this.content[a], a, this.loop);
-				}
-
-				if (this.loop.break) break;
-			}
-
-			return result;
-
-		},
-		reverseIterate : function(callback, context){
-			var result;
-			this.loop.break = this.loop.continue = false;
-
-			for (var a = this.content.size - 1; a >= 0; a--){
-				if (context){
-					result = callback.call(context, this.content[a], a, this.loop);
-				} else {
-					result = callback(this.content[a], a, this.loop);
-				}
-
-				if (this.loop.break) break;
-			}
-
-			return result;
-
-		},
-		contains : function(value){
-			return this.content.indexOf(value) > -1;
-		},
-		clear : function(){
-			this._content.length = 0;
-			this._content.size = 0;
-		}
-	}, "TokensCollection");
-
-	var TokensList = tools.extendCLASS(TokensCollection, {
-		content : {
-			get : function(){
-				return this._content;
-			},
-			set : function(content){
-				this._content = content || {};
-			}
-		},
-		add : function(name, value){
-			this.content[name] = value;
-			return this.content[name];
-		},
-		remove : function(name){
-			delete this.content[name];
-		},
-		iterate : function(callback, context){
-			var result;
-			this.loop.break = this.loop.continue = false;
-
-			for (var a in this.content){
-				if (context){
-					result = callback.call(context, this.content[a], a, this.loop);
-				} else {
-					result = callback(this.content[a], a, this.loop);
-				}
-
-				if (this.loop.break) break;
-			}
-
-			return result;
-
-		},
-		contains : function(name){
-			return typeof this.content[name] != "undefined";
-		},
-		clear : function(){
-			this.iterate(function(value, name){
-				delete this.content[name];
-			}, this)
-		}
-	}, "TokensList");
 
 	/*POINT*/
 	var Point = tools.CLASS({

@@ -1,5 +1,5 @@
 {
-    "version": "0.3.301-b",
+    "version": "0.3.302-b",
     "name": "pixton",
     "scripts": {
         "increase": "node node_modules/vpplus/vpplus.js increase-build"
