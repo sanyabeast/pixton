@@ -452,9 +452,9 @@ define(function(){
 					if (this.dom.hasAttribute("text-align")) this.styles.textAlign = this.dom.getAttribute("text-align");
 				}
 
-				for (var a = 0, l = this.dom.children.length; a < l; a++){
+				for (var a = 0, l = this.dom.children.length, newChild; a < l; a++){
 					if (this.dom.children[a].getAttribute(":id") == null){
-						let newChild = Pixton.createElement(this.dom.children[a].tagName.toLowerCase());
+						newChild = Pixton.createElement(this.dom.children[a].tagName.toLowerCase());
 						newChild.setDOMElement(this.dom.children[a]);
 						this.addChild(newChild);
 					}
@@ -1597,6 +1597,10 @@ define(function(){
 				y = tools.transCoord((evt.pageY - bounds.top), bounds.height, this.canvas.height) / this.scale.y;
 			}
 
+			if (!isTouchEvent && eventType == "pointerover"){
+				this.hovered = true;
+			}
+
 
 			this.pointerPosition.x = x;
 			this.pointerPosition.y = y;
@@ -1611,7 +1615,7 @@ define(function(){
 
 			if (eventType == "pointermove" || eventType == "mousewheel" || eventType == "panning"){
 
-				if (+new Date() - this.prevPointerEventTime < (this.interactionFreq || 10)){
+				if (+new Date() - this.prevPointerEventTime < (Pixton.interactionFreq || 10)){
 					return;
 				} 
 
@@ -1634,7 +1638,7 @@ define(function(){
 			}
 		},
 		resize : function(w, h){
-			var  resolution = this.resolution || window.devicePixelRatio || 1;
+			var  resolution = Pixton.resolution || this.resolution || window.devicePixelRatio || 1;
 			this.scale.set(resolution);
 			this.size.x = w;
 			this.size.y = h;
@@ -1659,9 +1663,26 @@ define(function(){
 				return this._fps;
 			},
 		},
-		render : function(absDelta, relDelta){
-			this._fps = (this._fps + 60 / relDelta) / 2; 
+		prevRenderingTime : {
+			value : +new Date(),
+			configurable : true,
+			writable : true
+		},
+		setSmartRendering : function(frameTime){
+			if (frameTime === false){
+				this.render = Pixton.prototype.render.bind(this);
+			} else {
+				this.render = function(absDelta, relDelta){
+					if (!this.hovered && (+new Date() - this.prevRenderingTime) < frameTime){
+						return;
+					}
 
+					Pixton.prototype.render.apply(this, arguments);
+				}
+			}
+		},
+		render : function(absDelta, relDelta){
+			this.prevRenderingTime = +new Date();
 			this.xCtx.clearRect(0, 0, this.xCanvas.width, this.xCanvas.height);
 			this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 			this.prerender(this.ctx);
